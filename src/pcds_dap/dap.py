@@ -10,7 +10,11 @@ from pydap.handlers.lib import BaseHandler, IterData
 from pydap.model import BaseType, DatasetType, SequenceType
 from webob import Request, Response
 
-from .application import StationDataset, StationDatasetService
+from .application import (
+    StationDataset,
+    StationDatasetService,
+    StationNotFoundError,
+)
 
 
 class StationRows(IterData):
@@ -82,8 +86,12 @@ def build_dataset(description: StationDataset, row_factory) -> DatasetType:
 class StationDapApplication:
     """Resolve a station URL and delegate protocol output to pydap."""
 
-    _path = re.compile(
+    _numeric_path = re.compile(
         r"^/(?P<kind>stations|climatologies)/(?P<station_id>[1-9][0-9]*)"
+        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver)$"
+    )
+    _public_path = re.compile(
+        r"^/(?P<kind>raw|climo)/(?P<network>[^/]+)/(?P<native_id>[^/]+)"
         r"\.(?P<response>dds|das|dods|asc|ascii|html|ver)$"
     )
 
@@ -92,14 +100,29 @@ class StationDapApplication:
 
     def __call__(self, environ, start_response):
         request = Request(environ)
-        match = self._path.fullmatch(request.path_info)
-        if match is None:
+        numeric_match = self._numeric_path.fullmatch(request.path_info)
+        public_match = self._public_path.fullmatch(request.path_info)
+        if numeric_match is None and public_match is None:
             return Response(status=404, text="DAP station dataset not found")(
                 environ, start_response
             )
 
-        station_id = int(match.group("station_id"))
-        climatology = match.group("kind") == "climatologies"
-        query = self.service.station(station_id, climatology=climatology)
-        dataset = build_dataset(query, lambda: self.service.repository.rows(query))
+        try:
+            if numeric_match is not None:
+                description = self.service.station(
+                    int(numeric_match.group("station_id")),
+                    climatology=numeric_match.group("kind") == "climatologies",
+                )
+            else:
+                description = self.service.public_station(
+                    public_match.group("network"),
+                    public_match.group("native_id"),
+                    climatology=public_match.group("kind") == "climo",
+                )
+        except StationNotFoundError as exc:
+            return Response(status=404, text=str(exc))(environ, start_response)
+
+        dataset = build_dataset(
+            description, lambda: self.service.repository.rows(description)
+        )
         return BaseHandler(dataset)(environ, start_response)

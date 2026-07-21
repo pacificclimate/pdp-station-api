@@ -33,8 +33,11 @@ The initial endpoint shape is:
 /dap/stations/{station_id}.dods
 /dap/stations/{station_id}.ascii
 /dap/climatologies/{station_id}.{response}
+/dap/raw/{network}/{native_id}.{response}
+/dap/climo/{network}/{native_id}.{response}
 ```
 
-The service deliberately uses numeric PyCDS station IDs. A compatibility
-resolver for legacy `network/native_id` URLs belongs in the application layer
-and can be added once the required old URL contract is fixed.
+Numeric PyCDS station IDs provide the canonical low-level API. The `raw` and
+`climo` routes provide a user-facing compatibility interface that resolves a
+published network and native station ID to the internal station ID. Responses
+are served directly through DAP; the legacy `.rsql` path component is not used.

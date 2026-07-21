@@ -1,10 +1,24 @@
 from datetime import datetime
 
-from pcds_dap.application import StationDataset, StationDatasetService
+import pytest
+
+from pcds_dap.application import (
+    StationDataset,
+    StationDatasetService,
+    StationNotFoundError,
+)
 from pcds_dap.dap import build_dataset
 
 
 class FakeRepository:
+    def published_station_id(self, station_id):
+        return station_id if station_id == 42 else None
+
+    def station_id(self, network, native_id):
+        if (network, native_id) == ("FLNRO-WMB", "1002"):
+            return 42
+        return None
+
     def describe(self, station_id, climatology=False):
         return StationDataset(station_id, climatology, ("obs_time", "temperature"))
 
@@ -18,6 +32,28 @@ def test_service_describes_station_dataset():
     query = service.station(42)
 
     assert query.columns == ("obs_time", "temperature")
+
+
+def test_service_rejects_unpublished_or_unknown_numeric_station():
+    service = StationDatasetService(FakeRepository())
+
+    with pytest.raises(StationNotFoundError):
+        service.station(99)
+
+
+def test_service_resolves_public_station_identifier():
+    service = StationDatasetService(FakeRepository())
+
+    query = service.public_station("FLNRO-WMB", "1002")
+
+    assert query.station_id == 42
+
+
+def test_service_rejects_unknown_public_station_identifier():
+    service = StationDatasetService(FakeRepository())
+
+    with pytest.raises(StationNotFoundError):
+        service.public_station("unknown", "station")
 
 
 def test_dataset_rows_are_lazy_and_reiterable():

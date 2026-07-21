@@ -3,6 +3,7 @@
 import copy
 import re
 from collections.abc import Callable, Iterator
+from datetime import datetime
 from typing import Any
 
 import numpy as np
@@ -42,9 +43,9 @@ class StationRows(IterData):
     def stream(self):
         for row in self.row_factory():
             values = tuple(row)
-            # DAP2 has no datetime scalar, so expose ISO-8601 text.
-            if values and hasattr(values[0], "isoformat"):
+            if values and isinstance(values[0], datetime):
                 values = (values[0].isoformat(), *values[1:])
+            values = tuple(np.nan if value is None else value for value in values)
             yield values
 
     @property
@@ -69,15 +70,19 @@ class StationRows(IterData):
 
 def build_dataset(description: StationDataset, row_factory) -> DatasetType:
     dataset = DatasetType(f"station_{description.station_id}")
-    dataset.attributes["station_id"] = description.station_id
-    dataset.attributes["climatology"] = description.climatology
+    dataset.attributes["NC_GLOBAL"] = dict(description.global_attributes)
     sequence = dataset["station_observations"] = SequenceType("station_observations")
 
     dtypes: dict[str, np.dtype] = {}
     for index, name in enumerate(description.columns):
         dtype = np.dtype("U") if index == 0 else np.dtype("float64")
         dtypes[name] = dtype
-        sequence[name] = BaseType(name, dtype=dtype)
+        attributes = (
+            description.time_attributes
+            if index == 0
+            else description.variable_attributes.get(name, {})
+        )
+        sequence[name] = BaseType(name, dtype=dtype, attributes=dict(attributes))
 
     sequence.data = StationRows(row_factory, copy.copy(sequence), dtypes)
     return dataset

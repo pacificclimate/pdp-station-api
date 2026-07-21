@@ -1,7 +1,7 @@
 """Station dataset use cases."""
 
-from dataclasses import dataclass
-from typing import Any, Protocol
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Protocol
 
 
 @dataclass(frozen=True)
@@ -9,6 +9,9 @@ class StationDataset:
     station_id: int
     climatology: bool
     columns: tuple[str, ...]
+    global_attributes: Mapping[str, Any] = field(default_factory=dict)
+    time_attributes: Mapping[str, Any] = field(default_factory=dict)
+    variable_attributes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
 
 class StationNotFoundError(LookupError):

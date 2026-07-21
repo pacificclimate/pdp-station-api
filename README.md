@@ -41,3 +41,13 @@ Numeric PyCDS station IDs provide the canonical low-level API. The `raw` and
 `climo` routes provide a user-facing compatibility interface that resolves a
 published network and native station ID to the internal station ID. Responses
 are served directly through DAP; the legacy `.rsql` path component is not used.
+
+Each dataset includes `NC_GLOBAL` station, network, contact, location, and
+elevation attributes. Horizontal coordinates are derived only from station
+history geometry. Network contact details are used when available and default
+to `pcic.support@uvic.ca`. Observation variables include their PyCDS display
+name, description, CF standard name, units, and cell-method metadata. Time is
+exposed as an ISO-8601 string with time-coordinate metadata.
+The global dataset name is prefixed by the SQLAlchemy database name, and its
+history records the UTC generation time, `pcds-dap` package version, and source
+database.

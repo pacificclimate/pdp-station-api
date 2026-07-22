@@ -12,7 +12,7 @@ from pycds.orm.tables import Contact, History, Network, Station, Variable
 from sqlalchemy import Engine, create_engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .application import StationDataset
+from .application import NetworkSummary, StationDataset, StationSummary
 
 DEFAULT_CONTACT = "pcic.support@uvic.ca"
 TIME_ATTRIBUTES = {
@@ -53,6 +53,65 @@ class PycdsStationRepository:
             time_attributes=TIME_ATTRIBUTES,
             variable_attributes=variable_attributes,
         )
+
+    def networks(self) -> tuple[NetworkSummary, ...]:
+        published_station = (
+            select(Station.id)
+            .where(
+                Station.network_id == Network.id,
+                Station.publish.is_(True),
+            )
+            .exists()
+        )
+        statement = (
+            select(Network.name, Network.display_name, Network.long_name)
+            .where(Network.publish.is_(True), published_station)
+            .order_by(Network.name)
+        )
+        with self._session() as session:
+            return tuple(
+                NetworkSummary(row.name, row.display_name, row.long_name)
+                for row in session.execute(statement)
+            )
+
+    def network(self, name: str) -> NetworkSummary | None:
+        statement = select(Network.name, Network.display_name, Network.long_name).where(
+            Network.name == name, Network.publish.is_(True)
+        )
+        with self._session() as session:
+            row = session.execute(statement).one_or_none()
+        if row is None:
+            return None
+        return NetworkSummary(row.name, row.display_name, row.long_name)
+
+    def stations(self, network: str) -> tuple[StationSummary, ...]:
+        latest_name = (
+            select(History.station_name)
+            .where(History.station_id == Station.id)
+            .order_by(History.sdate.desc().nullslast(), History.id.desc())
+            .limit(1)
+            .correlate(Station)
+            .scalar_subquery()
+        )
+        statement = (
+            select(
+                Station.id,
+                Station.native_id,
+                latest_name.label("station_name"),
+            )
+            .join(Network, Station.network_id == Network.id)
+            .where(
+                Network.name == network,
+                Network.publish.is_(True),
+                Station.publish.is_(True),
+            )
+            .order_by(Station.native_id, Station.id)
+        )
+        with self._session() as session:
+            return tuple(
+                StationSummary(row.id, row.native_id, row.station_name)
+                for row in session.execute(statement)
+            )
 
     def _global_attributes(self, session: Session, station_id: int) -> dict[str, Any]:
         statement = (

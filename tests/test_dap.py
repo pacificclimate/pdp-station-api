@@ -44,6 +44,17 @@ def test_public_identifier_dds_matches_numeric_station_dds():
     assert public.text == numeric.text
 
 
+def test_dap_accepts_mount_prefix_retained_by_wsgi_bridge():
+    app = StationDapApplication(
+        StationDatasetService(FakeRepository()), mount_path="/dap"
+    )
+
+    response = Request.blank("/dap/raw/FLNRO-WMB/1002.dds").get_response(app)
+
+    assert response.status_code == 200
+    assert "station_42" in response.text
+
+
 def test_public_climatology_route_resolves_station():
     app = StationDapApplication(StationDatasetService(FakeRepository()))
 

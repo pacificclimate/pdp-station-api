@@ -37,6 +37,21 @@ The initial endpoint shape is:
 /dap/climo/{network}/{native_id}.{response}
 ```
 
+The service also provides a small HTML catalog. `/` lists published networks,
+and `/networks/{network}` lists that network's published stations. Station
+links open the corresponding public DAP HTML download form.
+
+Pydap builds its HTML breadcrumbs mechanically from each segment of a dataset
+URL. Intermediate paths such as `/dap/raw` and `/dap/raw/{network}` are not DAP
+datasets in this service, so exact ASGI routes redirect them to `/` and
+`/networks/{network}` respectively. Equivalent redirects cover climatology and
+numeric-ID paths. These shims keep pydap's generated breadcrumbs useful without
+overriding or depending on its internal Jinja templates. Both trailing- and
+non-trailing-slash forms are handled because the broader `/dap` mount would
+otherwise consume trailing-slash paths before Starlette could normalize them.
+The `/dap` and `/dap/` roots also redirect to `/`, which makes pydap's generated
+“Home” breadcrumb return to the network catalog.
+
 Numeric PyCDS station IDs provide the canonical low-level API. The `raw` and
 `climo` routes provide a user-facing compatibility interface that resolves a
 published network and native station ID to the internal station ID. Responses

@@ -14,11 +14,31 @@ class StationDataset:
     variable_attributes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class NetworkSummary:
+    name: str
+    display_name: str | None = None
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class StationSummary:
+    station_id: int
+    native_id: str
+    name: str | None = None
+
+
 class StationNotFoundError(LookupError):
     """No published station matches a requested identifier."""
 
 
 class StationRepository(Protocol):
+    def networks(self) -> tuple[NetworkSummary, ...]: ...
+
+    def network(self, name: str) -> NetworkSummary | None: ...
+
+    def stations(self, network: str) -> tuple[StationSummary, ...]: ...
+
     def published_station_id(self, station_id: int) -> int | None: ...
 
     def station_id(self, network: str, native_id: str) -> int | None: ...
@@ -49,3 +69,30 @@ class StationDatasetService:
         if station_id is None:
             raise StationNotFoundError(f"Station {network}/{native_id} was not found")
         return self.station(station_id, climatology=climatology)
+
+    def networks(self) -> tuple[NetworkSummary, ...]:
+        return tuple(
+            sorted(
+                self.repository.networks(),
+                key=lambda network: (
+                    (network.display_name or network.name).casefold(),
+                    network.name.casefold(),
+                ),
+            )
+        )
+
+    def network_stations(
+        self, network: str
+    ) -> tuple[NetworkSummary, tuple[StationSummary, ...]]:
+        summary = self.repository.network(network)
+        if summary is None:
+            raise StationNotFoundError(f"Network {network} was not found")
+        stations = sorted(
+            self.repository.stations(network),
+            key=lambda station: (
+                station.native_id.casefold(),
+                (station.name or "").casefold(),
+                station.station_id,
+            ),
+        )
+        return summary, tuple(stations)

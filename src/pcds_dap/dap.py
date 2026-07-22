@@ -100,13 +100,19 @@ class StationDapApplication:
         r"\.(?P<response>dds|das|dods|asc|ascii|html|ver)$"
     )
 
-    def __init__(self, service: StationDatasetService):
+    def __init__(self, service: StationDatasetService, mount_path: str = ""):
         self.service = service
+        self.mount_path = mount_path.rstrip("/")
 
     def __call__(self, environ, start_response):
         request = Request(environ)
-        numeric_match = self._numeric_path.fullmatch(request.path_info)
-        public_match = self._public_path.fullmatch(request.path_info)
+        path_info = request.path_info
+        # WSGI servers should remove SCRIPT_NAME from PATH_INFO, but some ASGI
+        # bridges retain the mount prefix. Accept both forms at this boundary.
+        if self.mount_path and path_info.startswith(f"{self.mount_path}/"):
+            path_info = path_info[len(self.mount_path) :]
+        numeric_match = self._numeric_path.fullmatch(path_info)
+        public_match = self._public_path.fullmatch(path_info)
         if numeric_match is None and public_match is None:
             return Response(status=404, text="DAP station dataset not found")(
                 environ, start_response

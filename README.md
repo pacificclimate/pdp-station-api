@@ -37,6 +37,13 @@ The initial endpoint shape is:
 /dap/climo/{network}/{native_id}.{response}
 ```
 
+In addition to the standard DAP responses, `xlsx` and `nc` generate Excel and
+NetCDF4 downloads. These formats are assembled in a `SpooledTemporaryFile` so
+small responses stay in memory and larger responses automatically roll over to
+disk. The rollover threshold defaults to 1 GiB and can be set in bytes with
+`PCDS_DAP_SPOOL_MAX_SIZE`. Set it to `0` to roll over immediately. Excel files
+are limited to 1,048,575 observations plus their header row.
+
 The service also provides a small HTML catalog. `/` lists published networks,
 and `/networks/{network}` lists that network's published stations. Station
 links open the corresponding public DAP HTML download form.

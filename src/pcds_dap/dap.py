@@ -93,16 +93,22 @@ class StationDapApplication:
 
     _numeric_path = re.compile(
         r"^/(?P<kind>stations|climatologies)/(?P<station_id>[1-9][0-9]*)"
-        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver)$"
+        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc)$"
     )
     _public_path = re.compile(
         r"^/(?P<kind>raw|climo)/(?P<network>[^/]+)/(?P<native_id>[^/]+)"
-        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver)$"
+        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc)$"
     )
 
-    def __init__(self, service: StationDatasetService, mount_path: str = ""):
+    def __init__(
+        self,
+        service: StationDatasetService,
+        mount_path: str = "",
+        spool_max_size: int = 1 << 30,
+    ):
         self.service = service
         self.mount_path = mount_path.rstrip("/")
+        self.spool_max_size = spool_max_size
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -136,4 +142,5 @@ class StationDapApplication:
         dataset = build_dataset(
             description, lambda: self.service.repository.rows(description)
         )
+        dataset._pcds_spool_max_size = self.spool_max_size
         return BaseHandler(dataset)(environ, start_response)

@@ -1,0 +1,217 @@
+"""Download responses for station datasets."""
+
+from collections.abc import Iterator, Mapping
+import math
+from tempfile import SpooledTemporaryFile
+from typing import Any, BinaryIO
+
+import h5netcdf
+import h5py
+import numpy as np
+from pydap.lib import walk
+from pydap.model import SequenceType
+from pydap.responses.lib import BaseResponse
+from xlsxwriter import Workbook
+
+DEFAULT_SPOOL_MAX_SIZE = 1 << 30
+COPY_CHUNK_SIZE = 1024 * 1024
+EXCEL_MAX_DATA_ROWS = 1_048_575
+NETCDF_BATCH_SIZE = 10_000
+
+
+def _spool(dataset) -> BinaryIO:
+    max_size = getattr(dataset, "_pcds_spool_max_size", DEFAULT_SPOOL_MAX_SIZE)
+    stream = SpooledTemporaryFile(
+        max_size=max_size,
+        mode="w+b",
+    )
+    if max_size == 0:
+        stream.rollover()
+    return stream
+
+
+def _chunks(stream: BinaryIO) -> Iterator[bytes]:
+    try:
+        stream.seek(0)
+        while chunk := stream.read(COPY_CHUNK_SIZE):
+            yield chunk
+    finally:
+        stream.close()
+
+
+def _sequences(dataset) -> list[SequenceType]:
+    return list(walk(dataset, SequenceType))
+
+
+def _attribute_rows(
+    attributes: Mapping[str, Any], prefix: str = ""
+) -> Iterator[tuple[str, Any]]:
+    for name, value in attributes.items():
+        path = f"{prefix}.{name}" if prefix else name
+        if isinstance(value, Mapping):
+            yield from _attribute_rows(value, path)
+        else:
+            yield path, value
+
+
+def _scalar(value: Any) -> Any:
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    return value
+
+
+def _excel_value(value: Any) -> Any:
+    value = _scalar(value)
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, (list, tuple)):
+        return ", ".join(map(str, value))
+    return value
+
+
+class XLSXResponse(BaseResponse):
+    """Render sequence data and metadata as an Excel workbook."""
+
+    __description__ = "Excel workbook"
+
+    def __init__(self, dataset):
+        super().__init__(dataset)
+        self.headers.extend(
+            [
+                (
+                    "Content-Type",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ),
+                (
+                    "Content-Disposition",
+                    f'attachment; filename="{dataset.name}.xlsx"',
+                ),
+            ]
+        )
+
+    def __iter__(self):
+        output = _spool(self.dataset)
+        workbook = Workbook(output, {"constant_memory": True})
+        header = workbook.add_format(
+            {"bold": True, "font_color": "white", "bg_color": "#4F81BD"}
+        )
+
+        global_sheet = workbook.add_worksheet("Global attributes")
+        global_sheet.write_row(0, 0, ("Attribute", "Value"), header)
+        global_attributes = self.dataset.attributes.get(
+            "NC_GLOBAL", self.dataset.attributes
+        )
+        for row_number, (name, value) in enumerate(
+            _attribute_rows(global_attributes), start=1
+        ):
+            global_sheet.write_row(row_number, 0, (name, _excel_value(value)))
+
+        variable_sheet = workbook.add_worksheet("Variable attributes")
+        variable_sheet.write_row(0, 0, ("Variable", "Attribute", "Value"), header)
+        attribute_row = 1
+        sequences = _sequences(self.dataset)
+        for sequence in sequences:
+            for variable in sequence.children():
+                for name, value in _attribute_rows(variable.attributes):
+                    variable_sheet.write_row(
+                        attribute_row,
+                        0,
+                        (variable.name, name, _excel_value(value)),
+                    )
+                    attribute_row += 1
+
+        for sequence in sequences:
+            sheet = workbook.add_worksheet(sequence.name[:31])
+            sheet.write_row(0, 0, list(sequence.keys()), header)
+            for row_number, row in enumerate(sequence.iterdata(), start=1):
+                if row_number > EXCEL_MAX_DATA_ROWS:
+                    workbook.close()
+                    output.close()
+                    raise ValueError(
+                        "Excel downloads cannot exceed 1,048,575 observations"
+                    )
+                sheet.write_row(row_number, 0, map(_excel_value, row))
+
+        workbook.close()
+        return _chunks(output)
+
+
+def _netcdf_attribute(value: Any) -> Any:
+    value = _scalar(value)
+    if value is None:
+        return ""
+    if isinstance(value, (str, bytes, int, float, np.number, np.ndarray)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return np.asarray(value) if value else ""
+    return str(value)
+
+
+class NetCDFResponse(BaseResponse):
+    """Render sequence data as an unlimited-dimension NetCDF4 file."""
+
+    __description__ = "NetCDF4 file"
+
+    def __init__(self, dataset):
+        super().__init__(dataset)
+        self.headers.extend(
+            [
+                ("Content-Type", "application/x-netcdf"),
+                (
+                    "Content-Disposition",
+                    f'attachment; filename="{dataset.name}.nc"',
+                ),
+            ]
+        )
+
+    def __iter__(self):
+        output = _spool(self.dataset)
+        with h5netcdf.File(output, "w") as target:
+            global_attributes = self.dataset.attributes.get(
+                "NC_GLOBAL", self.dataset.attributes
+            )
+            for name, value in _attribute_rows(global_attributes):
+                target.attrs[name] = _netcdf_attribute(value)
+
+            sequences = _sequences(self.dataset)
+            if len(sequences) != 1:
+                raise ValueError("NetCDF downloads require exactly one sequence")
+            sequence = sequences[0]
+            target.dimensions["obs"] = None
+
+            variables = {}
+            for variable in sequence.children():
+                dtype = (
+                    h5py.string_dtype(encoding="utf-8")
+                    if variable.dtype.kind in "OUS"
+                    else variable.dtype
+                )
+                output_variable = target.create_variable(
+                    variable.name, ("obs",), dtype=dtype
+                )
+                for name, value in _attribute_rows(variable.attributes):
+                    output_variable.attrs[name] = _netcdf_attribute(value)
+                variables[variable.name] = output_variable
+
+            start = 0
+            batch = []
+            for row in sequence.iterdata():
+                batch.append(tuple(row))
+                if len(batch) == NETCDF_BATCH_SIZE:
+                    start = self._write_batch(target, variables, batch, start)
+                    batch.clear()
+            if batch:
+                self._write_batch(target, variables, batch, start)
+
+        return _chunks(output)
+
+    @staticmethod
+    def _write_batch(target, variables, rows, start):
+        stop = start + len(rows)
+        target.resize_dimension("obs", stop)
+        for index, variable in enumerate(variables.values()):
+            values = [row[index] for row in rows]
+            variable[start:stop] = values
+        return stop

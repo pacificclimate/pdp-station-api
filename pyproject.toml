@@ -10,20 +10,28 @@ packages = [{ include = "pcds_dap", from = "src" }]
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
 numpy = ">=2.0"
+h5netcdf = ">=1.6,<2"
+h5py = ">=3.12,<4"
 psycopg2 = ">=2.9.10,<3"
 pycds = { git = "https://github.com/pacificclimate/pycds.git", branch = "improved-station-query" }
 pydap = { git = "https://github.com/pydap/pydap.git", branch = "main" }
 sqlalchemy = ">=2.0,<3"
 starlette = ">=0.47,<1"
 uvicorn = { version = ">=0.35,<1", extras = ["standard"] }
+xlsxwriter = ">=3.2,<4"
 
 [tool.poetry.group.dev.dependencies]
 httpx = ">=0.28,<1"
+openpyxl = ">=3.1,<4"
 pytest = ">=8.4,<9"
 ruff = ">=0.12,<1"
 
 [tool.poetry.scripts]
 pcds-dap = "pcds_dap.__main__:main"
+
+[tool.poetry.plugins."pydap.response"]
+nc = "pcds_dap.responses:NetCDFResponse"
+xlsx = "pcds_dap.responses:XLSXResponse"
 
 [build-system]
 requires = ["poetry-core>=2.0"]

@@ -109,7 +109,10 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
             settings.database_url, yield_per=settings.database_yield_per
         )
     service = StationDatasetService(repository)
-    dap = StationDapApplication(service, mount_path="/dap")
+    spool_max_size = settings.spool_max_size if settings is not None else 1 << 30
+    dap = StationDapApplication(
+        service, mount_path="/dap", spool_max_size=spool_max_size
+    )
     return Starlette(
         routes=[
             Route("/health", health),

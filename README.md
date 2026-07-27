@@ -25,6 +25,16 @@ poetry run pytest
 PCDS_DSN=postgresql+psycopg2://user:password@host/database poetry run pcds-dap
 ```
 
+Application logging defaults to `INFO`. Set `PCDS_DAP_LOG_LEVEL` to `DEBUG`,
+`INFO`, `WARNING`, `ERROR`, or `CRITICAL`; for example, aggregate request and
+station progress messages can be enabled with:
+
+```console
+PCDS_DAP_LOG_LEVEL=DEBUG \
+PCDS_DSN=postgresql+psycopg2://user:password@host/database \
+poetry run pcds-dap
+```
+
 The initial endpoint shape is:
 
 ```text
@@ -43,6 +53,55 @@ small responses stay in memory and larger responses automatically roll over to
 disk. The rollover threshold defaults to 1 GiB and can be set in bytes with
 `PCDS_DAP_SPOOL_MAX_SIZE`. Set it to `0` to roll over immediately. Excel files
 are limited to 1,048,575 observations plus their header row.
+
+## Aggregate downloads
+
+`/agg` selects multiple published stations and returns a ZIP archive containing
+one data file per station and a `variables.csv` index in each network folder.
+The preferred interface is the safe, idempotent HTTP `QUERY` method defined by
+RFC 10008. `POST` accepts the same body for compatibility with clients and
+proxies that do not yet support `QUERY`; the legacy `GET` query-string contract
+is also supported during migration.
+
+```console
+curl -X QUERY http://localhost:8000/agg \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "networks": ["FLNRO-WMB", "BC-TS"],
+    "from_date": "2020-01-01",
+    "to_date": "2020-12-31",
+    "polygon": "MULTIPOLYGON (((-123.60 49.41, -123.60 49.45, -123.54 49.45, -123.54 49.41, -123.60 49.41)))",
+    "clip_dates": true,
+    "format": "nc"
+  }' --output pcds_data.zip
+```
+
+JSON accepts `networks`, `variables`, and `frequencies` as lists. Dates may use
+`YYYY-MM-DD` or the legacy `YYYY/MM/DD` form. The legacy form names
+(`network-name`, `input-vars`, `input-freq`, `input-polygon`, `data-format`,
+`cliptodate`, and the download flags) are accepted in query strings and
+form-encoded bodies. Variable and frequency filters determine which stations
+are included; as in PDP, they do not remove columns from the station files.
+
+Before starting a response, the service resolves the complete station set,
+enforces its limit, and loads each station's metadata and variable description.
+This catches likely failures without running the expensive observation queries.
+It then emits the ZIP signature and streams each member with ZIP data
+descriptors as its `obs_raw` query completes. Individual NetCDF and Excel
+members still use the configured spool threshold because those formats require
+finalization before their bytes can be read.
+
+Once the ZIP signature has been sent, an observation-query or serialization
+failure can only terminate the download; it cannot be changed into an HTTP
+error response. `PCDS_DAP_AGGREGATE_MAX_STATIONS` limits a selection to 1,000
+stations by default.
+
+Aggregate generation logs a 16-character SHA-256 fingerprint of the normalized
+request at debug level. Preflight, station retrieval, and completion messages
+share this identifier. Mid-stream failures are logged at error level with a
+traceback and the active station's numeric ID, network, and native ID, allowing
+a truncated client download to be correlated with server logs without logging
+the polygon or other raw request parameters.
 
 The service also provides a small HTML catalog. `/` lists published networks,
 and `/networks/{network}` lists that network's published stations. Station

@@ -1,6 +1,7 @@
 """Station dataset use cases."""
 
 from dataclasses import dataclass, field
+from datetime import date
 from typing import Any, Mapping, Protocol
 
 
@@ -12,6 +13,8 @@ class StationDataset:
     global_attributes: Mapping[str, Any] = field(default_factory=dict)
     time_attributes: Mapping[str, Any] = field(default_factory=dict)
     variable_attributes: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+    from_date: date | None = None
+    to_date: date | None = None
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,27 @@ class StationSummary:
     station_id: int
     native_id: str
     name: str | None = None
+
+
+@dataclass(frozen=True)
+class AggregateSelection:
+    networks: tuple[str, ...] = ()
+    variables: tuple[str, ...] = ()
+    frequencies: tuple[str, ...] = ()
+    from_date: date | None = None
+    to_date: date | None = None
+    polygon: str | None = None
+    only_with_climatology: bool = False
+    climatology: bool = False
+    clip_dates: bool = False
+    data_format: str = "nc"
+
+
+@dataclass(frozen=True)
+class AggregateStation:
+    station_id: int
+    network: str
+    native_id: str
 
 
 class StationNotFoundError(LookupError):
@@ -48,6 +72,10 @@ class StationRepository(Protocol):
     ) -> StationDataset: ...
 
     def rows(self, dataset: StationDataset) -> Any: ...
+
+    def aggregate_stations(
+        self, selection: AggregateSelection
+    ) -> tuple[AggregateStation, ...]: ...
 
 
 class StationDatasetService:

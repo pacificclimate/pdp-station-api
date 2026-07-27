@@ -2,17 +2,25 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, time, timedelta, timezone
 from importlib.metadata import version
 from typing import Any
 
 from pycds.orm.native_matviews import VarsPerHistory
 from pycds.orm.station_queries import query_one_station
-from pycds.orm.tables import Contact, History, Network, Station, Variable
-from sqlalchemy import Engine, create_engine, func, select
+from pycds.orm.tables import Contact, History, Network, Obs, Station, Variable
+from pycds.orm.views import CrmpNetworkGeoserver
+from sqlalchemy import Engine, String, cast, create_engine, func, select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session, sessionmaker
 
-from .application import NetworkSummary, StationDataset, StationSummary
+from .application import (
+    AggregateSelection,
+    AggregateStation,
+    NetworkSummary,
+    StationDataset,
+    StationSummary,
+)
 
 DEFAULT_CONTACT = "pcic.support@uvic.ca"
 TIME_ATTRIBUTES = {
@@ -127,7 +135,7 @@ class PycdsStationRepository:
             )
             .join(Network, Station.network_id == Network.id)
             .outerjoin(Contact, Network.contact_id == Contact.id)
-            .outerjoin(History, History.station_id == Station.id)
+            .join(History, History.station_id == Station.id)
             .where(Station.id == station_id)
             .order_by(History.sdate.desc().nullslast(), History.id.desc().nullslast())
             .limit(1)
@@ -257,12 +265,70 @@ class PycdsStationRepository:
         with self._session() as session:
             return session.scalar(statement)
 
+    def aggregate_stations(
+        self, selection: AggregateSelection
+    ) -> tuple[AggregateStation, ...]:
+        catalog = CrmpNetworkGeoserver
+        statement = (
+            select(Station.id, Network.name, Station.native_id)
+            .select_from(catalog)
+            .join(Station, Station.id == catalog.station_id)
+            .join(Network, Network.id == Station.network_id)
+            .where(Network.publish.is_(True), Station.publish.is_(True))
+        )
+        if selection.networks:
+            statement = statement.where(Network.name.in_(selection.networks))
+        if selection.variables:
+            station_variables = cast(
+                func.regexp_split_to_array(catalog.vars, r",\s*"),
+                postgresql.ARRAY(String),
+            )
+            statement = statement.where(
+                station_variables.overlap(postgresql.array(selection.variables))
+            )
+        if selection.frequencies:
+            statement = statement.where(catalog.freq.in_(selection.frequencies))
+        if selection.from_date:
+            statement = statement.where(
+                catalog.max_obs_time >= datetime.combine(selection.from_date, time.min)
+            )
+        if selection.to_date:
+            statement = statement.where(
+                catalog.min_obs_time
+                < datetime.combine(selection.to_date + timedelta(days=1), time.min)
+            )
+        if selection.polygon:
+            polygon = func.ST_GeomFromText(selection.polygon, 4326)
+            statement = statement.where(func.ST_Intersects(catalog.the_geom, polygon))
+        if selection.only_with_climatology:
+            statement = statement.where(
+                catalog.unique_variable_tags.contains(postgresql.array(["climatology"]))
+            )
+        statement = statement.distinct().order_by(Network.name, Station.native_id)
+        with self._session() as session:
+            return tuple(
+                AggregateStation(row.id, row.name, row.native_id)
+                for row in session.execute(statement)
+            )
+
     def rows(self, dataset: StationDataset) -> Iterator[tuple[Any, ...]]:
         # The generator owns the session for the entire response iteration.
         with self._session() as session:
             statement = query_one_station(
                 session, dataset.station_id, climo=dataset.climatology
-            ).execution_options(stream_results=True, yield_per=self._yield_per)
+            )
+            if dataset.from_date:
+                statement = statement.where(
+                    Obs.time >= datetime.combine(dataset.from_date, time.min)
+                )
+            if dataset.to_date:
+                statement = statement.where(
+                    Obs.time
+                    < datetime.combine(dataset.to_date + timedelta(days=1), time.min)
+                )
+            statement = statement.execution_options(
+                stream_results=True, yield_per=self._yield_per
+            )
             for row in session.execute(statement):
                 yield tuple(row)
 

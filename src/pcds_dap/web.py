@@ -1,14 +1,29 @@
 """ASGI composition root."""
 
 from html import escape
+import json
 from urllib.parse import quote
+from urllib.parse import parse_qs
 
 from starlette.applications import Starlette
 from starlette.middleware.wsgi import WSGIMiddleware
-from starlette.responses import HTMLResponse, JSONResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
+from starlette.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+    StreamingResponse,
+)
 from starlette.routing import Mount, Route
 
 from .application import StationDatasetService, StationNotFoundError
+from .aggregate import (
+    AggregateRequestError,
+    parse_selection,
+    prepare_archive,
+    stream_archive,
+)
 from .config import Settings
 from .dap import StationDapApplication
 from .persistence import create_repository
@@ -102,6 +117,62 @@ def _root_catalog_redirect(request):
     return RedirectResponse(request.url_for("networks"))
 
 
+async def _aggregate_parameters(request):
+    if request.method == "GET":
+        return dict(request.query_params)
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].lower()
+    if not content_type:
+        raise AggregateRequestError("QUERY and POST requests require Content-Type")
+    if content_type == "application/json":
+        try:
+            value = await request.json()
+        except json.JSONDecodeError as exc:
+            raise AggregateRequestError("Request body is not valid JSON") from exc
+        if not isinstance(value, dict):
+            raise AggregateRequestError("JSON request body must be an object")
+        return value
+    if content_type == "application/x-www-form-urlencoded":
+        body = (await request.body()).decode("utf-8")
+        return {
+            key: values if len(values) > 1 else values[0]
+            for key, values in parse_qs(body, keep_blank_values=True).items()
+        }
+    raise AggregateRequestError(
+        "Content-Type must be application/json or application/x-www-form-urlencoded"
+    )
+
+
+def _aggregate_endpoint(
+    service: StationDatasetService, spool_max_size: int, max_stations: int
+):
+    async def endpoint(request):
+        headers = {
+            "Accept-Query": "application/json, application/x-www-form-urlencoded"
+        }
+        if request.method == "OPTIONS":
+            headers["Allow"] = "GET, POST, QUERY, OPTIONS"
+            return Response(status_code=204, headers=headers)
+        try:
+            parameters = await _aggregate_parameters(request)
+            selection = parse_selection(parameters)
+            prepared = await run_in_threadpool(
+                prepare_archive,
+                service,
+                selection,
+                max_stations=max_stations,
+            )
+        except AggregateRequestError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=422, headers=headers)
+        headers["Content-Disposition"] = 'attachment; filename="pcds_data.zip"'
+        return StreamingResponse(
+            stream_archive(service, prepared, spool_max_size=spool_max_size),
+            media_type="application/zip",
+            headers=headers,
+        )
+
+    return endpoint
+
+
 def create_app(settings: Settings | None = None, repository=None) -> Starlette:
     if repository is None:
         settings = settings or Settings.from_environment()
@@ -110,6 +181,9 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
         )
     service = StationDatasetService(repository)
     spool_max_size = settings.spool_max_size if settings is not None else 1 << 30
+    aggregate_max_stations = (
+        settings.aggregate_max_stations if settings is not None else 1_000
+    )
     dap = StationDapApplication(
         service, mount_path="/dap", spool_max_size=spool_max_size
     )
@@ -121,6 +195,17 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 "/networks/{network}",
                 _station_index(service),
                 name="network-stations",
+            ),
+            Route(
+                "/agg",
+                _aggregate_endpoint(service, spool_max_size, aggregate_max_stations),
+                methods=["GET", "POST", "QUERY", "OPTIONS"],
+                name="aggregate-download",
+            ),
+            Route(
+                "/agg/",
+                _aggregate_endpoint(service, spool_max_size, aggregate_max_stations),
+                methods=["GET", "POST", "QUERY", "OPTIONS"],
             ),
             # Pydap constructs breadcrumbs from every DAP path segment. These
             # intermediate URLs do not represent datasets, so route them to the

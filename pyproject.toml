@@ -16,6 +16,7 @@ psycopg2 = ">=2.9.10,<3"
 pycds = { git = "https://github.com/pacificclimate/pycds.git", branch = "improved-station-query" }
 pydap = { git = "https://github.com/pydap/pydap.git", branch = "main" }
 sqlalchemy = ">=2.0,<3"
+shapely = ">=2.1,<3"
 starlette = ">=0.47,<1"
 uvicorn = { version = ">=0.35,<1", extras = ["standard"] }
 xlsxwriter = ">=3.2,<4"

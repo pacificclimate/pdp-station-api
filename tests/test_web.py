@@ -1,7 +1,7 @@
 from starlette.testclient import TestClient
 
-from pcds_dap.application import NetworkSummary, StationSummary
-from pcds_dap.web import create_app
+from pdp_station.application import NetworkSummary, StationSummary
+from pdp_station.web import create_app
 
 
 class FakeRepository:

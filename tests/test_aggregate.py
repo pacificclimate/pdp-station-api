@@ -7,21 +7,21 @@ import h5netcdf
 import pytest
 from starlette.testclient import TestClient
 
-from pcds_dap.application import (
+from pdp_station.application import (
     AggregateSelection,
     AggregateStation,
     NetworkSummary,
     StationDataset,
     StationDatasetService,
 )
-from pcds_dap.aggregate import (
+from pdp_station.aggregate import (
     parse_selection,
     prepare_archive,
     request_fingerprint,
     stream_archive,
 )
-from pcds_dap.config import Settings
-from pcds_dap.web import create_app
+from pdp_station.config import Settings
+from pdp_station.web import create_app
 
 
 class FakeAggregateRepository:
@@ -257,7 +257,7 @@ def test_midstream_error_logs_request_and_station(caplog):
         max_stations=10,
     )
 
-    with caplog.at_level(logging.DEBUG, logger="pcds_dap.aggregate"):
+    with caplog.at_level(logging.DEBUG, logger="pdp_station.aggregate"):
         with pytest.raises(RuntimeError, match="observation query failed"):
             list(stream_archive(service, prepared, spool_max_size=1024))
 

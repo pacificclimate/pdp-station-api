@@ -15,12 +15,14 @@ LOG_LEVELS = {
 
 
 def log_level_from_environment() -> int:
-    value = os.environ.get("PCDS_DAP_LOG_LEVEL", "INFO").strip().upper()
+    value = os.environ.get("PDP_STATION_LOG_LEVEL", "INFO").strip().upper()
     try:
         return LOG_LEVELS[value]
     except KeyError as exc:
         supported = ", ".join(LOG_LEVELS)
-        raise RuntimeError(f"PCDS_DAP_LOG_LEVEL must be one of: {supported}") from exc
+        raise RuntimeError(
+            f"PDP_STATION_LOG_LEVEL must be one of: {supported}"
+        ) from exc
 
 
 @dataclass(frozen=True)
@@ -38,23 +40,23 @@ class Settings:
             raise RuntimeError("PCDS_DSN must be set") from exc
         try:
             spool_max_size = int(
-                os.environ.get("PCDS_DAP_SPOOL_MAX_SIZE", str(1 << 30))
+                os.environ.get("PDP_STATION_SPOOL_MAX_SIZE", str(1 << 30))
             )
         except ValueError as exc:
-            raise RuntimeError("PCDS_DAP_SPOOL_MAX_SIZE must be an integer") from exc
+            raise RuntimeError("PDP_STATION_SPOOL_MAX_SIZE must be an integer") from exc
         if spool_max_size < 0:
-            raise RuntimeError("PCDS_DAP_SPOOL_MAX_SIZE must not be negative")
+            raise RuntimeError("PDP_STATION_SPOOL_MAX_SIZE must not be negative")
         try:
             aggregate_max_stations = int(
-                os.environ.get("PCDS_DAP_AGGREGATE_MAX_STATIONS", "1000")
+                os.environ.get("PDP_STATION_AGGREGATE_MAX_STATIONS", "1000")
             )
         except ValueError as exc:
             raise RuntimeError(
-                "PCDS_DAP_AGGREGATE_MAX_STATIONS must be an integer"
+                "PDP_STATION_AGGREGATE_MAX_STATIONS must be an integer"
             ) from exc
         if aggregate_max_stations <= 0:
             raise RuntimeError(
-                "PCDS_DAP_AGGREGATE_MAX_STATIONS must be a positive integer"
+                "PDP_STATION_AGGREGATE_MAX_STATIONS must be a positive integer"
             )
         return cls(
             database_url=database_url,

@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy.dialects import postgresql
 
-from pcds_dap.application import AggregateSelection
-from pcds_dap.persistence import DEFAULT_CONTACT, PycdsStationRepository
+from pdp_station.application import AggregateSelection
+from pdp_station.persistence import DEFAULT_CONTACT, PycdsStationRepository
 
 
 def test_contact_includes_name_and_email_when_available():
@@ -32,7 +32,8 @@ def test_generation_history_contains_date_version_and_database():
     )
 
     assert history == (
-        "Generated 2026-07-21T12:34:56+00:00 by pcds-dap 1.2.3 from database metnorth"
+        "Generated 2026-07-21T12:34:56+00:00 by pdp-station-api 1.2.3 "
+        "from database metnorth"
     )
 
 

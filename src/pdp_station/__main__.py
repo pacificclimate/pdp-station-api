@@ -11,7 +11,7 @@ from .config import log_level_from_environment
 def logging_config(level: int) -> dict:
     """Extend Uvicorn's configuration without changing its formatting."""
     config = deepcopy(LOGGING_CONFIG)
-    config["loggers"]["pcds_dap"] = {
+    config["loggers"]["pdp_station"] = {
         "handlers": ["default"],
         "level": level,
         "propagate": False,
@@ -22,7 +22,7 @@ def logging_config(level: int) -> dict:
 def main():
     level = log_level_from_environment()
     uvicorn.run(
-        "pcds_dap.web:create_app",
+        "pdp_station.web:create_app",
         factory=True,
         host="0.0.0.0",
         port=8000,

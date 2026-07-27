@@ -5,9 +5,9 @@ import h5netcdf
 import openpyxl
 from webob import Request
 
-from pcds_dap.application import StationDataset, StationDatasetService
-from pcds_dap.dap import StationDapApplication, build_dataset
-from pcds_dap.responses import NetCDFResponse, XLSXResponse, _spool
+from pdp_station.application import StationDataset, StationDatasetService
+from pdp_station.dap import StationDapApplication, build_dataset
+from pdp_station.responses import NetCDFResponse, XLSXResponse, _spool
 
 
 class FakeRepository:

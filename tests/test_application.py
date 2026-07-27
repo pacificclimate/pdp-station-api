@@ -2,12 +2,12 @@ from datetime import datetime
 
 import pytest
 
-from pcds_dap.application import (
+from pdp_station.application import (
     StationDataset,
     StationDatasetService,
     StationNotFoundError,
 )
-from pcds_dap.dap import build_dataset
+from pdp_station.dap import build_dataset
 
 
 class FakeRepository:

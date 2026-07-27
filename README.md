@@ -1,4 +1,4 @@
-# pcds-dap
+# pdp-station-api
 
 A streaming DAP2 service for PCIC station observations. It replaces the
 station-data portion of PDP's `pcds-only` backend while keeping protocol,
@@ -22,17 +22,17 @@ client development files (including `pg_config`) must be installed first.
 ```console
 poetry install
 poetry run pytest
-PCDS_DSN=postgresql+psycopg2://user:password@host/database poetry run pcds-dap
+PCDS_DSN=postgresql+psycopg2://user:password@host/database poetry run pdp-station-api
 ```
 
-Application logging defaults to `INFO`. Set `PCDS_DAP_LOG_LEVEL` to `DEBUG`,
+Application logging defaults to `INFO`. Set `PDP_STATION_LOG_LEVEL` to `DEBUG`,
 `INFO`, `WARNING`, `ERROR`, or `CRITICAL`; for example, aggregate request and
 station progress messages can be enabled with:
 
 ```console
-PCDS_DAP_LOG_LEVEL=DEBUG \
+PDP_STATION_LOG_LEVEL=DEBUG \
 PCDS_DSN=postgresql+psycopg2://user:password@host/database \
-poetry run pcds-dap
+poetry run pdp-station-api
 ```
 
 The initial endpoint shape is:
@@ -51,7 +51,7 @@ In addition to the standard DAP responses, `xlsx` and `nc` generate Excel and
 NetCDF4 downloads. These formats are assembled in a `SpooledTemporaryFile` so
 small responses stay in memory and larger responses automatically roll over to
 disk. The rollover threshold defaults to 1 GiB and can be set in bytes with
-`PCDS_DAP_SPOOL_MAX_SIZE`. Set it to `0` to roll over immediately. Excel files
+`PDP_STATION_SPOOL_MAX_SIZE`. Set it to `0` to roll over immediately. Excel files
 are limited to 1,048,575 observations plus their header row.
 
 ## Aggregate downloads
@@ -93,7 +93,7 @@ finalization before their bytes can be read.
 
 Once the ZIP signature has been sent, an observation-query or serialization
 failure can only terminate the download; it cannot be changed into an HTTP
-error response. `PCDS_DAP_AGGREGATE_MAX_STATIONS` limits a selection to 1,000
+error response. `PDP_STATION_AGGREGATE_MAX_STATIONS` limits a selection to 1,000
 stations by default.
 
 Aggregate generation logs a 16-character SHA-256 fingerprint of the normalized
@@ -130,5 +130,5 @@ to `pcic.support@uvic.ca`. Observation variables include their PyCDS display
 name, description, CF standard name, units, and cell-method metadata. Time is
 exposed as an ISO-8601 string with time-coordinate metadata.
 The global dataset name is prefixed by the SQLAlchemy database name, and its
-history records the UTC generation time, `pcds-dap` package version, and source
+history records the UTC generation time, `pdp-station-api` package version, and source
 database.

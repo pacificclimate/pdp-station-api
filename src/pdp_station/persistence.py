@@ -180,10 +180,10 @@ class PycdsStationRepository:
         if generated_at.tzinfo is None:
             generated_at = generated_at.replace(tzinfo=timezone.utc)
         generated_at = generated_at.astimezone(timezone.utc)
-        package_version = package_version or version("pcds-dap")
+        package_version = package_version or version("pdp-station-api")
         timestamp = generated_at.isoformat(timespec="seconds")
         return (
-            f"Generated {timestamp} by pcds-dap {package_version} "
+            f"Generated {timestamp} by pdp-station-api {package_version} "
             f"from database {database_name}"
         )
 

@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "pcds-dap"
+name = "pdp-station-api"
 version = "0.1.0"
 description = "Streaming OPeNDAP service for PCIC station data"
 authors = ["Pacific Climate Impacts Consortium"]
 license = "GPL-3.0-only"
 readme = "README.md"
-packages = [{ include = "pcds_dap", from = "src" }]
+packages = [{ include = "pdp_station", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.14"
@@ -28,11 +28,11 @@ pytest = ">=8.4,<9"
 ruff = ">=0.12,<1"
 
 [tool.poetry.scripts]
-pcds-dap = "pcds_dap.__main__:main"
+pdp-station-api = "pdp_station.__main__:main"
 
 [tool.poetry.plugins."pydap.response"]
-nc = "pcds_dap.responses:NetCDFResponse"
-xlsx = "pcds_dap.responses:XLSXResponse"
+nc = "pdp_station.responses:NetCDFResponse"
+xlsx = "pdp_station.responses:XLSXResponse"
 
 [build-system]
 requires = ["poetry-core>=2.0"]

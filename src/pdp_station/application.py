@@ -52,11 +52,25 @@ class AggregateStation:
     native_id: str
 
 
+@dataclass(frozen=True)
+class RelationReadiness:
+    relation: str
+    exists: bool
+    schema_usage: bool
+    select: bool
+
+    @property
+    def ready(self) -> bool:
+        return self.exists and self.schema_usage and self.select
+
+
 class StationNotFoundError(LookupError):
     """No published station matches a requested identifier."""
 
 
 class StationRepository(Protocol):
+    def ready(self) -> tuple[RelationReadiness, ...]: ...
+
     def networks(self) -> tuple[NetworkSummary, ...]: ...
 
     def network(self, name: str) -> NetworkSummary | None: ...

@@ -35,6 +35,27 @@ PCDS_DSN=postgresql+psycopg2://user:password@host/database \
 poetry run pdp-station-api
 ```
 
+## Kubernetes readiness
+
+`GET /readyz` verifies that the service can acquire a database connection and
+that every table, view, and materialized view it reads exists. It also checks
+that the configured role has `USAGE` on their schema and effective `SELECT`
+privilege on each relation. These are PostgreSQL catalog checks and do not scan
+station or observation data. The endpoint returns plain-text `ok` with status
+`200` when the service can accept traffic and status `503` when a check fails.
+`GET /readyz?verbose` reports existence, schema `USAGE`, and `SELECT` status for
+each required relation. Raw database exception details are written only to
+server logs.
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8000
+  periodSeconds: 10
+  timeoutSeconds: 5
+```
+
 The initial endpoint shape is:
 
 ```text

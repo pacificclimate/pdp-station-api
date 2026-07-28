@@ -10,7 +10,18 @@ from pycds.orm.native_matviews import VarsPerHistory
 from pycds.orm.station_queries import query_one_station
 from pycds.orm.tables import Contact, History, Network, Obs, Station, Variable
 from pycds.orm.views import CrmpNetworkGeoserver
-from sqlalchemy import Engine, String, cast, create_engine, func, select
+from sqlalchemy import (
+    Engine,
+    String,
+    and_,
+    cast,
+    column,
+    create_engine,
+    func,
+    select,
+    table,
+    values,
+)
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -18,6 +29,7 @@ from .application import (
     AggregateSelection,
     AggregateStation,
     NetworkSummary,
+    RelationReadiness,
     StationDataset,
     StationSummary,
 )
@@ -28,6 +40,21 @@ TIME_ATTRIBUTES = {
     "long_name": "observation time",
     "standard_name": "time",
 }
+REQUIRED_RELATIONS = tuple(
+    sorted(
+        relation.__table__.fullname
+        for relation in (
+            Contact,
+            CrmpNetworkGeoserver,
+            History,
+            Network,
+            Obs,
+            Station,
+            Variable,
+            VarsPerHistory,
+        )
+    )
+)
 
 
 class PycdsStationRepository:
@@ -44,6 +71,65 @@ class PycdsStationRepository:
             yield session
         finally:
             session.close()
+
+    def ready(self) -> tuple[RelationReadiness, ...]:
+        """Return existence and effective read privileges for required relations."""
+        required = values(
+            column("relation_name", String),
+            column("schema_name", String),
+            column("unqualified_name", String),
+            name="required_relations",
+        ).data([(relation, *relation.split(".", 1)) for relation in REQUIRED_RELATIONS])
+        namespaces = table(
+            "pg_namespace",
+            column("oid"),
+            column("nspname", String),
+            schema="pg_catalog",
+        )
+        relations = table(
+            "pg_class",
+            column("oid"),
+            column("relname", String),
+            column("relnamespace"),
+            schema="pg_catalog",
+        )
+        catalog = required.outerjoin(
+            namespaces, namespaces.c.nspname == required.c.schema_name
+        ).outerjoin(
+            relations,
+            and_(
+                relations.c.relnamespace == namespaces.c.oid,
+                relations.c.relname == required.c.unqualified_name,
+            ),
+        )
+        statement = (
+            select(
+                required.c.relation_name,
+                relations.c.oid.is_not(None).label("exists"),
+                func.coalesce(
+                    func.has_schema_privilege(namespaces.c.oid, "USAGE"), False
+                ).label("has_schema_usage"),
+                func.coalesce(
+                    func.has_table_privilege(relations.c.oid, "SELECT"), False
+                ).label("has_select"),
+            )
+            .select_from(catalog)
+            .order_by(required.c.relation_name)
+        )
+        with self._session() as session:
+            rows = {row.relation_name: row for row in session.execute(statement)}
+
+        return tuple(
+            RelationReadiness(
+                relation,
+                exists=bool(rows.get(relation) and rows[relation].exists),
+                schema_usage=bool(
+                    rows.get(relation) and rows[relation].has_schema_usage
+                ),
+                select=bool(rows.get(relation) and rows[relation].has_select),
+            )
+            for relation in REQUIRED_RELATIONS
+        )
 
     def describe(self, station_id: int, climatology: bool = False) -> StationDataset:
         with self._session() as session:

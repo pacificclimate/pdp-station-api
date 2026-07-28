@@ -2,6 +2,7 @@
 
 from html import escape
 import json
+import logging
 from urllib.parse import quote
 from urllib.parse import parse_qs
 
@@ -11,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.responses import (
     HTMLResponse,
     JSONResponse,
+    PlainTextResponse,
     RedirectResponse,
     Response,
     StreamingResponse,
@@ -28,9 +30,41 @@ from .config import Settings
 from .dap import StationDapApplication
 from .persistence import create_repository
 
+logger = logging.getLogger(__name__)
 
-async def health(request):
-    return JSONResponse({"status": "ok"})
+
+def _readiness_endpoint(repository):
+    def endpoint(request):
+        verbose = "verbose" in request.query_params
+        try:
+            checks = repository.ready()
+        except Exception:
+            logger.exception("Readiness check failed: database unavailable")
+            content = (
+                "[-]database failed\nreadyz check failed\n" if verbose else "not ready"
+            )
+            return PlainTextResponse(content, status_code=503)
+        ready = all(check.ready for check in checks)
+        if not ready:
+            logger.error("Readiness check failed: required database access unavailable")
+        if verbose:
+            lines = ["[+]database connection"]
+            for check in checks:
+                lines.extend(
+                    (
+                        f"[{'+' if check.exists else '-'}]{check.relation} existence",
+                        f"[{'+' if check.schema_usage else '-'}]"
+                        f"{check.relation} schema_usage",
+                        f"[{'+' if check.select else '-'}]{check.relation} select",
+                    )
+                )
+            lines.append(f"readyz check {'passed' if ready else 'failed'}")
+            content = "\n".join(lines) + "\n"
+        else:
+            content = "ok" if ready else "not ready"
+        return PlainTextResponse(content, status_code=200 if ready else 503)
+
+    return endpoint
 
 
 def _page(title: str, content: str) -> str:
@@ -189,7 +223,7 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
     )
     return Starlette(
         routes=[
-            Route("/health", health),
+            Route("/readyz", _readiness_endpoint(repository), name="readiness"),
             Route("/", _network_index(service), name="networks"),
             Route(
                 "/networks/{network}",

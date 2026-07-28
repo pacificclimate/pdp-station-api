@@ -140,6 +140,22 @@ def test_legacy_get_contract_selects_networks_and_ascii_format():
         ]
 
 
+def test_legacy_csv_format_uses_ascii_response_with_csv_extension():
+    client = TestClient(create_app(repository=FakeAggregateRepository()))
+
+    response = client.get(
+        "/agg/",
+        params={"network-name": "FLNRO-WMB", "data-format": "csv"},
+    )
+
+    with _zip(response) as archive:
+        assert archive.namelist() == [
+            "FLNRO-WMB/1002.csv",
+            "FLNRO-WMB/variables.csv",
+        ]
+        assert "station_observations" in archive.read("FLNRO-WMB/1002.csv").decode()
+
+
 def test_post_form_contract_clips_station_rows_to_dates():
     repository = FakeAggregateRepository()
     client = TestClient(create_app(repository=repository))

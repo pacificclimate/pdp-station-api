@@ -29,6 +29,7 @@ from .responses import NetCDFResponse, XLSXResponse
 SUPPORTED_FORMATS = {
     "ascii": ("ascii", ASCIIResponse),
     "asc": ("ascii", ASCIIResponse),
+    "csv": ("csv", ASCIIResponse),
     "nc": ("nc", NetCDFResponse),
     "xlsx": ("xlsx", XLSXResponse),
 }

@@ -25,6 +25,25 @@ poetry run pytest
 PCDS_DSN=postgresql+psycopg2://user:password@host/database poetry run pdp-station-api
 ```
 
+## Container image
+
+Build and run the production image locally with:
+
+```console
+docker build -f docker/Dockerfile -t pdp-station-api .
+docker run --rm -p 8000:8000 \
+  -e PCDS_DSN=postgresql+psycopg2://user:password@host/database \
+  pdp-station-api
+```
+
+GitHub Actions tests every push and pull request on Python 3.12 and 3.13.
+Pushes also publish `pcic/pdp-station-api:<branch-or-tag>` to Docker Hub. The
+`main` branch additionally publishes `pcic/pdp-station-api:latest`, and tags of
+the form `X.Y.Z` publish a matching versioned image. Docker publishing requires
+the same `pcicdevops_at_dockerhub_username` and
+`pcicdevops_at_dockerhub_password` repository secrets used by other PCIC
+services.
+
 Application logging defaults to `INFO`. Set `PDP_STATION_LOG_LEVEL` to `DEBUG`,
 `INFO`, `WARNING`, `ERROR`, or `CRITICAL`; for example, aggregate request and
 station progress messages can be enabled with:

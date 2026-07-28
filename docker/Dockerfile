@@ -45,6 +45,10 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY --from=builder --chown=${USERNAME}:${USERNAME} /app/.venv /app/.venv
+COPY --from=builder --chown=${USERNAME}:${USERNAME} /app/src /app/src
+
+# Poetry installs the project in editable mode, so its .pth file points here.
+RUN python -c "import pdp_station"
 
 USER ${USERNAME}
 

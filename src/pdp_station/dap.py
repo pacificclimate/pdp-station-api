@@ -1,6 +1,7 @@
 """pydap model and WSGI adapters."""
 
 import copy
+from html import escape
 import re
 from collections.abc import Callable, Iterator
 from datetime import datetime
@@ -16,6 +17,7 @@ from .application import (
     StationDatasetService,
     StationNotFoundError,
 )
+from .urls import relative_app_root
 
 
 class StationRows(IterData):
@@ -143,4 +145,74 @@ class StationDapApplication:
             description, lambda: self.service.repository.rows(description)
         )
         dataset._pcds_spool_max_size = self.spool_max_size
-        return BaseHandler(dataset)(environ, start_response)
+        handler = BaseHandler(dataset)
+        response = numeric_match or public_match
+        if response.group("response") == "html":
+            return self._relative_html(handler, request, environ, start_response)
+        return handler(environ, start_response)
+
+    @staticmethod
+    def _relative_html(handler, request, environ, start_response):
+        """Rewrite pydap's same-origin HTML URLs relative to the app root."""
+        captured = {}
+        written = []
+
+        def capture_response(status, headers, exc_info=None):
+            captured["status"] = status
+            captured["headers"] = headers
+            captured["exc_info"] = exc_info
+            return written.append
+
+        iterable = handler(environ, capture_response)
+        try:
+            body = b"".join((*written, *iterable))
+        finally:
+            close = getattr(iterable, "close", None)
+            if close is not None:
+                close()
+
+        path = request.path_info
+        script_name = request.script_name.rstrip("/")
+        if script_name and not path.startswith(f"{script_name}/"):
+            path = script_name + path
+        root = relative_app_root(path).encode()
+        origin = request.host_url.rstrip("/").encode()
+        body = body.replace(origin + b"/", root).replace(origin, root)
+
+        relative_page = root + path.lstrip("/").encode()
+        body = body.replace(
+            b'href="' + relative_page + b'/"',
+            b'href="' + relative_page + b'"',
+            1,
+        )
+
+        forwarded_prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if not forwarded_prefix.startswith("/") or any(
+            character in forwarded_prefix for character in '\r\n"<>'
+        ):
+            forwarded_prefix = ""
+        relative_data_url = root + path.lstrip("/").removesuffix(".html").encode()
+        public_data_url = escape(
+            request.host_url.rstrip("/")
+            + forwarded_prefix
+            + path.removesuffix(".html"),
+            quote=True,
+        ).encode()
+        body = body.replace(
+            b'value="' + relative_data_url + b'"',
+            b'value="' + public_data_url + b'"',
+            1,
+        )
+
+        headers = []
+        for name, value in captured["headers"]:
+            if name.lower() == "content-length":
+                value = str(len(body))
+            elif name.lower() == "location":
+                encoded = value.encode()
+                value = (
+                    encoded.replace(origin + b"/", root).replace(origin, root).decode()
+                )
+            headers.append((name, value))
+        start_response(captured["status"], headers, captured["exc_info"])
+        return [body]

@@ -29,6 +29,7 @@ from .aggregate import (
 from .config import Settings
 from .dap import StationDapApplication
 from .persistence import create_repository
+from .urls import relative_app_root
 
 logger = logging.getLogger(__name__)
 
@@ -87,10 +88,11 @@ def _page(title: str, content: str) -> str:
 
 def _network_index(service: StationDatasetService):
     def endpoint(request):
+        root = relative_app_root(request.url.path)
         items = []
         for network in service.networks():
             label = network.display_name or network.name
-            href = f"/networks/{quote(network.name, safe='')}"
+            href = f"{root}networks/{quote(network.name, safe='')}"
             items.append(
                 f'<li><a href="{href}">{escape(label)}</a> '
                 f"<small>({escape(network.name)})</small></li>"
@@ -103,6 +105,7 @@ def _network_index(service: StationDatasetService):
 
 def _station_index(service: StationDatasetService):
     def endpoint(request):
+        root = relative_app_root(request.url.path)
         network_name = request.path_params["network"]
         try:
             network, stations = service.network_stations(network_name)
@@ -115,7 +118,7 @@ def _station_index(service: StationDatasetService):
         items = []
         for station in stations:
             href = (
-                f"/dap/raw/{quote(network.name, safe='')}/"
+                f"{root}dap/raw/{quote(network.name, safe='')}/"
                 f"{quote(station.native_id, safe='')}.html"
             )
             station_name = (
@@ -130,7 +133,7 @@ def _station_index(service: StationDatasetService):
             f"<p>{escape(network.description)}</p>" if network.description else ""
         )
         content = (
-            '<p><a href="/">All networks</a></p>'
+            f'<p><a href="{root}">All networks</a></p>'
             + description
             + "<ul>"
             + "".join(items)
@@ -143,12 +146,14 @@ def _station_index(service: StationDatasetService):
 
 def _network_catalog_redirect(request):
     return RedirectResponse(
-        request.url_for("network-stations", network=request.path_params["network"])
+        relative_app_root(request.url.path)
+        + "networks/"
+        + quote(request.path_params["network"], safe="")
     )
 
 
 def _root_catalog_redirect(request):
-    return RedirectResponse(request.url_for("networks"))
+    return RedirectResponse(relative_app_root(request.url.path))
 
 
 async def _aggregate_parameters(request):

@@ -109,7 +109,7 @@ def test_network_index_links_to_network_station_page():
 
     assert response.status_code == 200
     assert "Wildfire Management Branch" in response.text
-    assert 'href="/networks/FLNRO-WMB"' in response.text
+    assert 'href="./networks/FLNRO-WMB"' in response.text
     assert response.text.index("Alpha Network") < response.text.index(
         "Wildfire Management Branch"
     )
@@ -123,7 +123,8 @@ def test_station_index_links_to_public_dap_html_response():
     assert response.status_code == 200
     assert "Wildfire weather observations" in response.text
     assert "Example Station" in response.text
-    assert 'href="/dap/raw/FLNRO-WMB/1002.html">1002</a>' in response.text
+    assert 'href="../dap/raw/FLNRO-WMB/1002.html">1002</a>' in response.text
+    assert 'href="../">All networks</a>' in response.text
     assert response.text.index("1001") < response.text.index("1002")
     assert response.text.index("1002") < response.text.index("1003")
 
@@ -147,7 +148,12 @@ def test_pydap_network_breadcrumbs_redirect_to_catalog():
     ):
         response = client.get(path, follow_redirects=False)
         assert response.status_code == 307
-        assert response.headers["location"].endswith("/networks/FLNRO-WMB")
+        expected = (
+            "../../../networks/FLNRO-WMB"
+            if path.endswith("/")
+            else "../../networks/FLNRO-WMB"
+        )
+        assert response.headers["location"] == expected
 
 
 def test_pydap_root_breadcrumbs_redirect_to_network_index():
@@ -167,4 +173,8 @@ def test_pydap_root_breadcrumbs_redirect_to_network_index():
     ):
         response = client.get(path, follow_redirects=False)
         assert response.status_code == 307
-        assert response.headers["location"].endswith("/")
+        depth = len([part for part in path.split("/") if part])
+        if not path.endswith("/"):
+            depth -= 1
+        expected = "../" * depth or "./"
+        assert response.headers["location"] == expected

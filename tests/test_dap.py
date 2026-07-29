@@ -58,6 +58,47 @@ def test_dap_accepts_mount_prefix_retained_by_wsgi_bridge():
     assert "station_42" in response.text
 
 
+def test_html_response_uses_relative_same_origin_urls():
+    app = StationDapApplication(
+        StationDatasetService(FakeRepository()), mount_path="/dap"
+    )
+
+    response = Request.blank(
+        "/dap/raw/FLNRO-WMB/1002.html",
+        base_url="https://example.test",
+        headers={"X-Forwarded-Prefix": "/met-data-portal-pcds/api/data"},
+    ).get_response(app)
+
+    assert response.status_code == 200
+    assert 'href="../../../"' in response.text
+    assert 'href="../../../dap/raw/"' in response.text
+    assert 'href="../../../dap/raw/FLNRO-WMB/1002.html"' in response.text
+    assert 'href="../../../dap/raw/FLNRO-WMB/1002.html/"' not in response.text
+    assert 'action="../../../dap/raw/FLNRO-WMB/1002.html"' in response.text
+    assert 'href="https://example.test' not in response.text
+    assert 'action="https://example.test' not in response.text
+    assert (
+        'value="https://example.test/met-data-portal-pcds/api/data/'
+        'dap/raw/FLNRO-WMB/1002"' in response.text
+    )
+    assert 'href="https://pydap.github.io/' in response.text
+
+
+def test_html_form_redirect_uses_relative_ascii_url():
+    app = StationDapApplication(
+        StationDatasetService(FakeRepository()), mount_path="/dap"
+    )
+
+    response = Request.blank(
+        "/dap/raw/FLNRO-WMB/1002.html",
+        base_url="https://example.test",
+        method="POST",
+    ).get_response(app)
+
+    assert response.status_code == 303
+    assert response.location == "../../../dap/raw/FLNRO-WMB/1002.ascii"
+
+
 def test_public_climatology_route_resolves_station():
     app = StationDapApplication(StationDatasetService(FakeRepository()))
 

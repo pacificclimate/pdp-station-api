@@ -6,7 +6,7 @@ import openpyxl
 from webob import Request
 
 from pdp_station.application import StationDataset, StationDatasetService
-from pdp_station.dap import StationDapApplication, build_dataset
+from pdp_station.dap import OPENDAP_LOGO_URL, StationDapApplication, build_dataset
 from pdp_station.responses import NetCDFResponse, XLSXResponse, _spool
 
 
@@ -75,6 +75,8 @@ def test_html_response_uses_relative_same_origin_urls():
     assert 'href="../../../dap/raw/FLNRO-WMB/1002.html"' in response.text
     assert 'href="../../../dap/raw/FLNRO-WMB/1002.html/"' not in response.text
     assert 'action="../../../dap/raw/FLNRO-WMB/1002.html"' in response.text
+    assert f'src="{OPENDAP_LOGO_URL}"' in response.text
+    assert "/static/logo.png" not in response.text
     assert 'href="https://example.test' not in response.text
     assert 'action="https://example.test' not in response.text
     assert (
@@ -97,6 +99,18 @@ def test_html_form_redirect_uses_relative_ascii_url():
 
     assert response.status_code == 303
     assert response.location == "../../../dap/raw/FLNRO-WMB/1002.ascii"
+
+
+def test_html_response_replaces_logo_under_wsgi_mount():
+    app = StationDapApplication(StationDatasetService(FakeRepository()))
+    request = Request.blank("/raw/FLNRO-WMB/1002.html", base_url="https://example.test")
+    request.environ["SCRIPT_NAME"] = "/dap"
+
+    response = request.get_response(app)
+
+    assert response.status_code == 200
+    assert f'src="{OPENDAP_LOGO_URL}"' in response.text
+    assert "/dap/static/logo.png" not in response.text
 
 
 def test_public_climatology_route_resolves_station():

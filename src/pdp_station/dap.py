@@ -19,6 +19,11 @@ from .application import (
 )
 from .urls import relative_app_root
 
+OPENDAP_LOGO_URL = (
+    "https://www.opendap.org/wp-content/uploads/2024/01/"
+    "cropped-Group-1000001607-270x270.png"
+)
+
 
 class StationRows(IterData):
     """Re-iterable pydap data backed by a database-row factory."""
@@ -177,6 +182,12 @@ class StationDapApplication:
             path = script_name + path
         root = relative_app_root(path).encode()
         origin = request.host_url.rstrip("/").encode()
+        logo_sources = {
+            origin + b"/static/logo.png",
+            request.application_url.rstrip("/").encode() + b"/static/logo.png",
+        }
+        for logo_source in logo_sources:
+            body = body.replace(logo_source, OPENDAP_LOGO_URL.encode())
         body = body.replace(origin + b"/", root).replace(origin, root)
 
         relative_page = root + path.lstrip("/").encode()

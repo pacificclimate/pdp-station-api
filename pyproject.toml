@@ -32,6 +32,7 @@ ruff = ">=0.12,<1"
 pdp-station-api = "pdp_station.__main__:main"
 
 [tool.poetry.plugins."pydap.response"]
+csv = "pdp_station.responses:CSVResponse"
 nc = "pdp_station.responses:NetCDFResponse"
 xlsx = "pdp_station.responses:XLSXResponse"
 

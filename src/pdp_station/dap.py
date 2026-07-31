@@ -17,6 +17,7 @@ from .application import (
     StationDatasetService,
     StationNotFoundError,
 )
+from .responses import CSVResponse
 from .urls import relative_app_root
 
 OPENDAP_LOGO_URL = (
@@ -114,11 +115,11 @@ class StationDapApplication:
 
     _numeric_path = re.compile(
         r"^/(?P<kind>stations|climatologies)/(?P<station_id>[1-9][0-9]*)"
-        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc)$"
+        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc|csv)$"
     )
     _public_path = re.compile(
         r"^/(?P<kind>raw|climo)/(?P<network>[^/]+)/(?P<native_id>[^/]+)"
-        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc)$"
+        r"\.(?P<response>dds|das|dods|asc|ascii|html|ver|xlsx|nc|csv)$"
     )
 
     def __init__(
@@ -168,6 +169,7 @@ class StationDapApplication:
         dataset._pcds_spool_max_size = self.spool_max_size
         dataset._pcds_xlsx_engine = self.xlsx_engine
         handler = StationHandler(dataset)
+        handler.responses = {**handler.responses, "csv": CSVResponse}
         response = numeric_match or public_match
         if response.group("response") == "html":
             return self._relative_html(handler, request, environ, start_response)

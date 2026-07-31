@@ -374,6 +374,11 @@ def test_netcdf_response_contains_data_and_metadata(tmp_path):
 def test_download_routes_are_recognized():
     app = StationDapApplication(StationDatasetService(FakeRepository()))
 
+    csv_response = Request.blank("/stations/42.csv").get_response(app)
+
+    assert csv_response.status_code == 200
+    assert csv_response.content_type == "text/csv"
+    assert csv_response.text == ("obs_time,temperature\r\n2025-01-02T03:04:00,12.5\r\n")
     assert Request.blank("/stations/42.xlsx").get_response(app).status_code == 200
     assert Request.blank("/stations/42.nc").get_response(app).status_code == 200
 

@@ -1,6 +1,8 @@
 """Download responses for station datasets."""
 
 from collections.abc import Iterator, Mapping
+import csv
+from io import StringIO
 from itertools import chain
 import math
 from tempfile import SpooledTemporaryFile
@@ -17,6 +19,7 @@ from xlsxwriter import Workbook
 
 DEFAULT_SPOOL_MAX_SIZE = 1 << 30
 COPY_CHUNK_SIZE = 1024 * 1024
+CSV_CHUNK_SIZE = 1024 * 1024
 EXCEL_MAX_DATA_ROWS = 1_048_575
 NETCDF_BATCH_SIZE = 10_000
 
@@ -71,6 +74,54 @@ def _excel_value(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return ", ".join(map(str, value))
     return value
+
+
+def _csv_value(value: Any) -> Any:
+    value = _scalar(value)
+    if value is None or (
+        isinstance(value, (float, np.floating)) and not math.isfinite(value)
+    ):
+        return ""
+    if isinstance(value, (list, tuple)):
+        return ", ".join(map(str, value))
+    return value
+
+
+class CSVResponse(BaseResponse):
+    """Render one sequence as buffered, standards-compliant CSV."""
+
+    __description__ = "CSV"
+
+    def __init__(self, dataset):
+        super().__init__(dataset)
+        self.headers.extend(
+            [
+                ("Content-Type", "text/csv; charset=utf-8"),
+                (
+                    "Content-Disposition",
+                    f'attachment; filename="{dataset.name}.csv"',
+                ),
+            ]
+        )
+
+    def __iter__(self):
+        sequences = _sequences(self.dataset)
+        if len(sequences) != 1:
+            raise ValueError("CSV downloads require exactly one sequence")
+        sequence = sequences[0]
+        output = StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\r\n")
+        writer.writerow(sequence.keys())
+
+        for row in sequence.iterdata():
+            writer.writerow(_csv_value(value) for value in row)
+            if output.tell() >= CSV_CHUNK_SIZE:
+                yield output.getvalue().encode("utf-8")
+                output.seek(0)
+                output.truncate(0)
+
+        if output.tell():
+            yield output.getvalue().encode("utf-8")
 
 
 class XLSXResponse(BaseResponse):

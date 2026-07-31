@@ -1,5 +1,6 @@
 from datetime import datetime
 from io import BytesIO
+import csv
 import logging
 from zipfile import ZipFile
 
@@ -141,7 +142,7 @@ def test_legacy_get_contract_selects_networks_and_ascii_format():
         ]
 
 
-def test_legacy_csv_format_uses_ascii_response_with_csv_extension():
+def test_legacy_csv_format_returns_csv_with_iso_times_and_missing_values():
     client = TestClient(create_app(repository=FakeAggregateRepository()))
 
     response = client.get(
@@ -154,7 +155,15 @@ def test_legacy_csv_format_uses_ascii_response_with_csv_extension():
             "FLNRO-WMB/1002.csv",
             "FLNRO-WMB/variables.csv",
         ]
-        assert "station_observations" in archive.read("FLNRO-WMB/1002.csv").decode()
+        rows = list(
+            csv.reader(archive.read("FLNRO-WMB/1002.csv").decode().splitlines())
+        )
+        assert rows == [
+            ["obs_time", "temperature"],
+            ["2019-12-31T12:00:00", "1.0"],
+            ["2020-01-15T12:00:00", "2.0"],
+            ["2021-01-01T12:00:00", "3.0"],
+        ]
 
 
 def test_post_form_contract_clips_station_rows_to_dates():

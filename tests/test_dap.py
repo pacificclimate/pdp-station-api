@@ -9,7 +9,13 @@ from webob import Request
 
 from pdp_station.application import StationDataset, StationDatasetService
 from pdp_station.dap import OPENDAP_LOGO_URL, StationDapApplication, build_dataset
-from pdp_station.responses import FastExcel, NetCDFResponse, XLSXResponse, _spool
+from pdp_station.responses import (
+    CSVResponse,
+    FastExcel,
+    NetCDFResponse,
+    XLSXResponse,
+    _spool,
+)
 
 
 class FakeRepository:
@@ -200,6 +206,46 @@ def test_rows_serialize_iso_time_and_missing_observations():
 
     assert rows[0][0] == "1970-01-02T00:00:00"
     assert np.isnan(rows[0][1])
+
+
+def test_csv_response_contains_headers_iso_times_and_blank_missing_values():
+    description = StationDataset(42, False, ("obs_time", "temperature"))
+    dataset = build_dataset(
+        description,
+        lambda: iter(
+            (
+                (datetime(2025, 1, 2, 3, 4), 12.5),
+                (datetime(2025, 1, 2, 4, 4), None),
+            )
+        ),
+    )
+
+    result = b"".join(CSVResponse(dataset)).decode()
+
+    assert result == (
+        "obs_time,temperature\r\n2025-01-02T03:04:00,12.5\r\n2025-01-02T04:04:00,\r\n"
+    )
+
+
+def test_csv_response_buffers_rows_into_chunks(monkeypatch):
+    monkeypatch.setattr("pdp_station.responses.CSV_CHUNK_SIZE", 30)
+    description = StationDataset(42, False, ("obs_time", "temperature"))
+    dataset = build_dataset(
+        description,
+        lambda: iter((datetime(2025, 1, 2, hour), float(hour)) for hour in range(4)),
+    )
+
+    chunks = list(CSVResponse(dataset))
+
+    assert len(chunks) > 1
+    assert b"".join(chunks).count(b"\r\n") == 5
+
+
+def test_empty_csv_response_still_contains_headers():
+    description = StationDataset(42, False, ("obs_time", "temperature"))
+    dataset = build_dataset(description, lambda: iter(()))
+
+    assert b"".join(CSVResponse(dataset)) == b"obs_time,temperature\r\n"
 
 
 def test_dods_encodes_iso_time_strings():

@@ -24,12 +24,12 @@ from .application import (
     StationDatasetService,
 )
 from .dap import build_dataset
-from .responses import NetCDFResponse, XLSXResponse
+from .responses import CSVResponse, NetCDFResponse, XLSXResponse
 
 SUPPORTED_FORMATS = {
     "ascii": ("ascii", ASCIIResponse),
     "asc": ("ascii", ASCIIResponse),
-    "csv": ("csv", ASCIIResponse),
+    "csv": ("csv", CSVResponse),
     "nc": ("nc", NetCDFResponse),
     "xlsx": ("xlsx", XLSXResponse),
 }

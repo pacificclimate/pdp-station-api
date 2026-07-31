@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from pdp_station.__main__ import logging_config
-from pdp_station.config import log_level_from_environment
+from pdp_station.config import Settings, log_level_from_environment
 
 
 def test_log_level_defaults_to_info(monkeypatch):
@@ -35,3 +35,25 @@ def test_logging_config_reuses_uvicorn_formatter_and_handler():
     }
     assert config["handlers"]["default"]["formatter"] == "default"
     assert config["formatters"]["default"]["()"] == ("uvicorn.logging.DefaultFormatter")
+
+
+def test_xlsx_engine_defaults_to_xlsxwriter(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.delenv("PDP_STATION_XLSX_ENGINE", raising=False)
+
+    assert Settings.from_environment().xlsx_engine == "xlsxwriter"
+
+
+def test_xlsx_engine_is_configurable(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_XLSX_ENGINE", " RUSTPY ")
+
+    assert Settings.from_environment().xlsx_engine == "rustpy"
+
+
+def test_invalid_xlsx_engine_is_rejected(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_XLSX_ENGINE", "unknown")
+
+    with pytest.raises(RuntimeError, match="PDP_STATION_XLSX_ENGINE"):
+        Settings.from_environment()

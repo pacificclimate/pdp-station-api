@@ -302,6 +302,7 @@ def stream_archive(
     prepared: PreparedAggregate,
     *,
     spool_max_size: int,
+    xlsx_engine: str = "xlsxwriter",
 ) -> Iterator[bytes]:
     """Stream a valid ZIP, querying observation rows only after its signature."""
     request_id = prepared.request_id
@@ -350,6 +351,7 @@ def stream_archive(
                         ),
                     )
                     dataset._pcds_spool_max_size = spool_max_size
+                    dataset._pcds_xlsx_engine = xlsx_engine
                     for chunk in response_type(dataset):
                         member.write(chunk)
                         yield from output.drain()

@@ -31,6 +31,7 @@ class Settings:
     database_yield_per: int = 1_000
     spool_max_size: int = 1 << 30
     aggregate_max_stations: int = 1_000
+    xlsx_engine: str = "xlsxwriter"
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -58,8 +59,16 @@ class Settings:
             raise RuntimeError(
                 "PDP_STATION_AGGREGATE_MAX_STATIONS must be a positive integer"
             )
+        xlsx_engine = (
+            os.environ.get("PDP_STATION_XLSX_ENGINE", "xlsxwriter").strip().lower()
+        )
+        if xlsx_engine not in {"xlsxwriter", "rustpy"}:
+            raise RuntimeError(
+                "PDP_STATION_XLSX_ENGINE must be one of: xlsxwriter, rustpy"
+            )
         return cls(
             database_url=database_url,
             spool_max_size=spool_max_size,
             aggregate_max_stations=aggregate_max_stations,
+            xlsx_engine=xlsx_engine,
         )

@@ -4,6 +4,7 @@ import logging
 from zipfile import ZipFile
 
 import h5netcdf
+import openpyxl
 import pytest
 from starlette.testclient import TestClient
 
@@ -289,3 +290,27 @@ def test_midstream_error_logs_request_and_station(caplog):
     assert error.aggregate_request_id == prepared.request_id
     assert error.station_id == 42
     assert error.exc_info is not None
+
+
+def test_aggregate_can_use_rustpy_xlsx_engine():
+    repository = FakeAggregateRepository()
+    service = StationDatasetService(repository)
+    prepared = prepare_archive(
+        service,
+        AggregateSelection(networks=("FLNRO-WMB",), data_format="xlsx"),
+        max_stations=10,
+    )
+
+    archive = b"".join(
+        stream_archive(
+            service,
+            prepared,
+            spool_max_size=1024,
+            xlsx_engine="rustpy",
+        )
+    )
+
+    workbook_data = ZipFile(BytesIO(archive)).read("FLNRO-WMB/1002.xlsx")
+    workbook = openpyxl.load_workbook(BytesIO(workbook_data), read_only=True)
+    assert workbook["station_observations"]["B2"].value == 1.0
+    workbook.close()

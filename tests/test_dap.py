@@ -1,13 +1,15 @@
 from datetime import datetime
+from io import BytesIO
 
 import numpy as np
 import h5netcdf
 import openpyxl
+import pytest
 from webob import Request
 
 from pdp_station.application import StationDataset, StationDatasetService
 from pdp_station.dap import OPENDAP_LOGO_URL, StationDapApplication, build_dataset
-from pdp_station.responses import NetCDFResponse, XLSXResponse, _spool
+from pdp_station.responses import FastExcel, NetCDFResponse, XLSXResponse, _spool
 
 
 class FakeRepository:
@@ -209,7 +211,8 @@ def test_dods_encodes_iso_time_strings():
     assert b"Data:\n" in response.body
 
 
-def test_xlsx_response_contains_data_and_metadata(tmp_path):
+@pytest.mark.parametrize("engine", ["xlsxwriter", "rustpy"])
+def test_xlsx_response_contains_data_and_metadata(tmp_path, engine):
     description = StationDataset(
         42,
         False,
@@ -219,20 +222,83 @@ def test_xlsx_response_contains_data_and_metadata(tmp_path):
     )
     dataset = build_dataset(
         description,
-        lambda: iter(((datetime(2025, 1, 2, 3, 4), 12.5),)),
+        lambda: iter(
+            (
+                (datetime(2025, 1, 2, 3, 4), 12.5),
+                (datetime(2025, 1, 2, 4, 4), None),
+            )
+        ),
     )
-    path = tmp_path / "station.xlsx"
+    dataset._pcds_xlsx_engine = engine
+    path = tmp_path / f"station-{engine}.xlsx"
     path.write_bytes(b"".join(XLSXResponse(dataset)))
 
     workbook = openpyxl.load_workbook(path, read_only=True)
     assert workbook["Global attributes"]["A2"].value == "network"
     assert workbook["station_observations"]["A2"].value == "2025-01-02T03:04:00"
     assert workbook["station_observations"]["B2"].value == 12.5
+    assert workbook["station_observations"]["B3"].value is None
+    assert workbook["station_observations"]["A1"].font.bold
+    assert workbook["station_observations"]["A1"].fill.fgColor.rgb == "FF4F81BD"
     assert list(workbook.sheetnames) == [
         "Global attributes",
         "Variable attributes",
         "station_observations",
     ]
+
+
+@pytest.mark.parametrize("engine", ["xlsxwriter", "rustpy"])
+def test_xlsx_constraint_with_no_matching_rows_keeps_headers(engine):
+    class BctsRepository(FakeRepository):
+        def station_id(self, network, native_id):
+            if (network, native_id) == ("BC-TS", "1066"):
+                return 42
+            return super().station_id(network, native_id)
+
+        def describe(self, station_id, climatology=False):
+            return StationDataset(
+                station_id,
+                climatology,
+                ("obs_time", "air_temp"),
+                global_attributes={"network": "BC-TS"},
+            )
+
+    app = StationDapApplication(
+        StationDatasetService(BctsRepository()), xlsx_engine=engine
+    )
+    response = Request.blank(
+        "/raw/BC-TS/1066.xlsx?station_observations.obs_time,"
+        'station_observations.air_temp&station_observations.obs_time<"2010-01-01"'
+    ).get_response(app)
+
+    assert response.status_code == 200
+    workbook = openpyxl.load_workbook(BytesIO(response.body), read_only=True)
+    assert list(workbook["station_observations"].values) == [("obs_time", "air_temp")]
+    workbook.close()
+
+
+def test_constrained_direct_xlsx_preserves_rustpy_engine(monkeypatch):
+    calls = 0
+    original_save = FastExcel.save
+
+    def recording_save(writer):
+        nonlocal calls
+        calls += 1
+        return original_save(writer)
+
+    monkeypatch.setattr(FastExcel, "save", recording_save)
+    app = StationDapApplication(
+        StationDatasetService(FakeRepository()), xlsx_engine="rustpy"
+    )
+
+    response = Request.blank(
+        "/raw/FLNRO-WMB/1002.xlsx?station_observations.obs_time,"
+        'station_observations.temperature&station_observations.obs_time<"2030-01-01"'
+    ).get_response(app)
+
+    assert response.status_code == 200
+    assert response.body
+    assert calls == 1
 
 
 def test_netcdf_response_contains_data_and_metadata(tmp_path):

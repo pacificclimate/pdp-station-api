@@ -25,6 +25,20 @@ OPENDAP_LOGO_URL = (
 )
 
 
+class StationHandler(BaseHandler):
+    """A pydap handler that preserves response settings when constrained."""
+
+    def parse(self, projection, selection, buffer_size=None):
+        if buffer_size is None:
+            dataset = super().parse(projection, selection)
+        else:
+            dataset = super().parse(projection, selection, buffer_size)
+        for name in ("_pcds_spool_max_size", "_pcds_xlsx_engine"):
+            if hasattr(self.dataset, name):
+                setattr(dataset, name, getattr(self.dataset, name))
+        return dataset
+
+
 class StationRows(IterData):
     """Re-iterable pydap data backed by a database-row factory."""
 
@@ -112,10 +126,12 @@ class StationDapApplication:
         service: StationDatasetService,
         mount_path: str = "",
         spool_max_size: int = 1 << 30,
+        xlsx_engine: str = "xlsxwriter",
     ):
         self.service = service
         self.mount_path = mount_path.rstrip("/")
         self.spool_max_size = spool_max_size
+        self.xlsx_engine = xlsx_engine
 
     def __call__(self, environ, start_response):
         request = Request(environ)
@@ -150,7 +166,8 @@ class StationDapApplication:
             description, lambda: self.service.repository.rows(description)
         )
         dataset._pcds_spool_max_size = self.spool_max_size
-        handler = BaseHandler(dataset)
+        dataset._pcds_xlsx_engine = self.xlsx_engine
+        handler = StationHandler(dataset)
         response = numeric_match or public_match
         if response.group("response") == "html":
             return self._relative_html(handler, request, environ, start_response)

@@ -182,7 +182,10 @@ async def _aggregate_parameters(request):
 
 
 def _aggregate_endpoint(
-    service: StationDatasetService, spool_max_size: int, max_stations: int
+    service: StationDatasetService,
+    spool_max_size: int,
+    max_stations: int,
+    xlsx_engine: str,
 ):
     async def endpoint(request):
         headers = {
@@ -204,7 +207,12 @@ def _aggregate_endpoint(
             return JSONResponse({"error": str(exc)}, status_code=422, headers=headers)
         headers["Content-Disposition"] = 'attachment; filename="pcds_data.zip"'
         return StreamingResponse(
-            stream_archive(service, prepared, spool_max_size=spool_max_size),
+            stream_archive(
+                service,
+                prepared,
+                spool_max_size=spool_max_size,
+                xlsx_engine=xlsx_engine,
+            ),
             media_type="application/zip",
             headers=headers,
         )
@@ -223,8 +231,12 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
     aggregate_max_stations = (
         settings.aggregate_max_stations if settings is not None else 1_000
     )
+    xlsx_engine = settings.xlsx_engine if settings is not None else "xlsxwriter"
     dap = StationDapApplication(
-        service, mount_path="/dap", spool_max_size=spool_max_size
+        service,
+        mount_path="/dap",
+        spool_max_size=spool_max_size,
+        xlsx_engine=xlsx_engine,
     )
     return Starlette(
         routes=[
@@ -237,13 +249,23 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
             ),
             Route(
                 "/agg",
-                _aggregate_endpoint(service, spool_max_size, aggregate_max_stations),
+                _aggregate_endpoint(
+                    service,
+                    spool_max_size,
+                    aggregate_max_stations,
+                    xlsx_engine,
+                ),
                 methods=["GET", "POST", "QUERY", "OPTIONS"],
                 name="aggregate-download",
             ),
             Route(
                 "/agg/",
-                _aggregate_endpoint(service, spool_max_size, aggregate_max_stations),
+                _aggregate_endpoint(
+                    service,
+                    spool_max_size,
+                    aggregate_max_stations,
+                    xlsx_engine,
+                ),
                 methods=["GET", "POST", "QUERY", "OPTIONS"],
             ),
             # Pydap constructs breadcrumbs from every DAP path segment. These

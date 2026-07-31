@@ -94,6 +94,14 @@ disk. The rollover threshold defaults to 1 GiB and can be set in bytes with
 `PDP_STATION_SPOOL_MAX_SIZE`. Set it to `0` to roll over immediately. Excel files
 are limited to 1,048,575 observations plus their header row.
 
+Excel generation uses Python XlsxWriter by default. Set
+`PDP_STATION_XLSX_ENGINE=rustpy` to use the experimental Rust-backed
+`rustpy-xlsxwriter` engine for direct and aggregate XLSX downloads. The default
+can be selected explicitly with `PDP_STATION_XLSX_ENGINE=xlsxwriter`.
+If a constraint produces no observation rows, the Rust-backed path delegates
+that workbook to XlsxWriter so the data sheet still contains its column header
+row.
+
 ## Aggregate downloads
 
 `/agg` selects multiple published stations and returns a ZIP archive containing

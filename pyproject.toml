@@ -13,7 +13,7 @@ numpy = ">=2.0"
 h5netcdf = ">=1.6,<2"
 h5py = ">=3.12,<4"
 psycopg2 = ">=2.9.10,<3"
-pycds = { git = "https://github.com/pacificclimate/pycds.git", branch = "improved-station-query" }
+pycds = { git = "https://github.com/pacificclimate/pycds.git", branch = "improved-obs-indexes" }
 pydap = { git = "https://github.com/pydap/pydap.git", branch = "main" }
 sqlalchemy = ">=2.0,<3"
 shapely = ">=2.1,<3"

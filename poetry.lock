@@ -1128,8 +1128,8 @@ dev = ["alembic-verify (>=0.1.4,<0.2.0)", "black (>=24.3.0)", "pytest (>=8.4.0)"
 [package.source]
 type = "git"
 url = "https://github.com/pacificclimate/pycds.git"
-reference = "improved-station-query"
-resolved_reference = "24268d489019206492da090324f2211596f4c949"
+reference = "improved-obs-indexes"
+resolved_reference = "56af3be88263a612917c37a264f9117085f28038"
 
 [[package]]
 name = "pydap"
@@ -2248,4 +2248,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "e5ea5066804f2d34e71313da6d8670bf208f9178bb2c0f4287829f43281a4cdc"
+content-hash = "8c043cddbfaa7e6578ee670433104db74032aa837a7a339b980659450422ad6e"

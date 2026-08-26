@@ -1,0 +1,46 @@
+run,measurement_date,case,format,endpoint,total_seconds,bytes,validation,station_count,observation_count,xlsx_engine
+initial,2026-08-14,Big,ascii,prime,3598.515547,111242855,completed,596,54964866,not_applicable
+initial,2026-08-14,Big,csv,prime,340.595921,105422908,completed,596,54964866,not_applicable
+initial,2026-08-14,Big,xlsx,prime,367.547751,306853182,completed,596,54964866,rustpy
+initial,2026-08-14,Big,nc,prime,282.822514,151158524,completed,596,54964866,not_applicable
+initial,2026-08-14,Big filtered,ascii,prime,3151.638354,97806390,completed,577,46993384,not_applicable
+initial,2026-08-14,Big filtered,csv,prime,300.179601,92452508,completed,577,46993384,not_applicable
+initial,2026-08-14,Big filtered,xlsx,prime,324.929933,266861319,completed,577,46993384,rustpy
+initial,2026-08-14,Big filtered,nc,prime,252.048745,133412299,completed,577,46993384,not_applicable
+initial,2026-08-14,Smaller,ascii,prime,499.052055,21022687,completed,125,8122597,not_applicable
+initial,2026-08-14,Smaller,csv,prime,48.391791,20365034,completed,125,8122597,not_applicable
+initial,2026-08-14,Smaller,xlsx,prime,51.778340,49743862,completed,125,8122597,rustpy
+initial,2026-08-14,Smaller,nc,prime,39.611919,26543283,completed,125,8122597,not_applicable
+initial,2026-08-14,Small,ascii,prime,56.517126,1959054,completed,4,1086886,not_applicable
+initial,2026-08-14,Small,csv,prime,5.383456,1849647,completed,4,1086886,not_applicable
+initial,2026-08-14,Small,xlsx,prime,5.968361,5475356,completed,4,1086886,rustpy
+initial,2026-08-14,Small,nc,prime,4.394723,2347948,completed,4,1086886,not_applicable
+reduced,2026-08-20,Smaller,ascii,prime,524.196273,21033470,valid,125,8122597,not_applicable
+reduced,2026-08-20,Smaller,csv,prime,50.231452,20374677,valid,125,8122597,not_applicable
+reduced,2026-08-20,Smaller,nc,prime,49.558929,26557522,valid,125,8122597,not_applicable
+reduced,2026-08-20,Smaller EC_raw/MoTIe,ascii,prime,328.386893,10672364,valid,6,5185405,not_applicable
+reduced,2026-08-20,Smaller EC_raw/MoTIe,csv,prime,26.412459,9766436,valid,6,5185405,not_applicable
+reduced,2026-08-20,Smaller EC_raw/MoTIe,nc,prime,26.968579,10556255,valid,6,5185405,not_applicable
+reduced,2026-08-20,Small,ascii,prime,58.776104,1962706,valid,4,1086886,not_applicable
+reduced,2026-08-20,Small,csv,prime,5.667768,1853050,valid,4,1086886,not_applicable
+reduced,2026-08-20,Small,xlsx,prime,12.685185,5718098,valid,4,1086886,pre_rustpy
+reduced,2026-08-20,Small,nc,prime,4.368193,2352234,valid,4,1086886,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,ascii,prime,290.165723,10545694,valid,17,4792860,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,csv,prime,29.210439,10203834,valid,17,4792860,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,xlsx,prime,65.286827,29524455,valid,17,4792860,pre_rustpy
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,nc,prime,23.296897,13619618,valid,17,4792860,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,ascii,legacy,44.747642,14785521,valid,17,4792860,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,xlsx,legacy,137.065238,41370900,valid,17,4792860,not_applicable
+ecraw_bch,2026-08-20,Smaller EC_raw/BCH,nc,legacy,260.946993,16430059,valid,17,4792860,not_applicable
+rustpy_xlsx,2026-08-21,Smaller EC_raw/BCH RustPy XLSX,xlsx,prime,31.793133,27928267,valid,17,4792860,rustpy
+rustpy_xlsx,2026-08-21,Smaller EC_raw/BCH RustPy XLSX,xlsx,legacy,211.201012,41372399,valid,17,4792860,not_applicable
+legacy_ascii_repeat,2026-08-21,Smaller EC_raw/BCH ASCII repeat 1,ascii,legacy,61.258243,14786192,valid,17,4792860,not_applicable
+legacy_ascii_repeat,2026-08-21,Smaller EC_raw/BCH ASCII repeat 2,ascii,legacy,60.108551,14786192,valid,17,4792860,not_applicable
+legacy_ascii_repeat,2026-08-21,Smaller EC_raw/BCH ASCII repeat 3,ascii,legacy,44.954644,14786192,valid,17,4792860,not_applicable
+legacy_ascii_repeat,2026-08-21,Smaller EC_raw/BCH ASCII repeat 4,ascii,legacy,122.733896,14786192,valid,17,4792860,not_applicable
+legacy_ascii_repeat,2026-08-21,Smaller EC_raw/BCH ASCII repeat 5,ascii,legacy,42.333997,14786192,valid,17,4792860,not_applicable
+production_legacy_ascii,2026-08-22,Production Smaller EC_raw/BCH ASCII run 1,ascii,legacy,122.217506,14786749,valid,17,4792860,not_applicable
+production_legacy_ascii,2026-08-22,Production Smaller EC_raw/BCH ASCII run 2,ascii,legacy,81.587321,14786749,valid,17,4792860,not_applicable
+production_legacy_ascii,2026-08-22,Production Smaller EC_raw/BCH ASCII run 3,ascii,legacy,38.096661,14786749,valid,17,4792860,not_applicable
+production_legacy_ascii,2026-08-22,Production Smaller EC_raw/BCH ASCII run 4,ascii,legacy,38.439315,14786749,valid,17,4792860,not_applicable
+production_legacy_ascii,2026-08-22,Production Smaller EC_raw/BCH ASCII run 5,ascii,legacy,40.788648,14786749,valid,17,4792860,not_applicable

@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="920" viewBox="0 0 1400 920">
+<rect width="100%" height="100%" fill="white"/>
+<text x="700.0" y="34.0" text-anchor="middle" font-family="sans-serif" font-size="22" font-weight="bold">Completed response throughput by observation count</text>
+<text x="700.0" y="58.0" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#555">Logarithmic axes; points are runs and lines connect medians at each workload</text>
+<text x="95.0" y="92.0" font-family="sans-serif" font-size="17" font-weight="bold">ASCII</text>
+<line x1="95.0" y1="447.5" x2="705.0" y2="447.5" stroke="#e2e2e2"/>
+<text x="87.0" y="451.5" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">10,000</text>
+<line x1="95.0" y1="376.5" x2="705.0" y2="376.5" stroke="#e2e2e2"/>
+<text x="87.0" y="380.5" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">30,000</text>
+<line x1="95.0" y1="298.7" x2="705.0" y2="298.7" stroke="#e2e2e2"/>
+<text x="87.0" y="302.7" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">100,000</text>
+<line x1="95.0" y1="227.6" x2="705.0" y2="227.6" stroke="#e2e2e2"/>
+<text x="87.0" y="231.6" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">300,000</text>
+<line x1="95.0" y1="149.8" x2="705.0" y2="149.8" stroke="#e2e2e2"/>
+<text x="87.0" y="153.8" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">1,000,000</text>
+<line x1="95.0" y1="105.0" x2="95.0" y2="447.5" stroke="#777"/>
+<line x1="95.0" y1="447.5" x2="705.0" y2="447.5" stroke="#777"/>
+<line x1="95.0" y1="105.0" x2="95.0" y2="447.5" stroke="#eeeeee"/>
+<line x1="258.7" y1="105.0" x2="258.7" y2="447.5" stroke="#eeeeee"/>
+<line x1="438.1" y1="105.0" x2="438.1" y2="447.5" stroke="#eeeeee"/>
+<line x1="601.7" y1="105.0" x2="601.7" y2="447.5" stroke="#eeeeee"/>
+<polyline points="107.4,368.3 328.5,364.1 340.2,371.3 407.1,356.1 668.6,374.3 691.9,374.5" fill="none" stroke="#1769aa" stroke-width="2.5"/>
+<circle cx="691.9" cy="374.5" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big; Prime ascii: 30,914 B/s; 111,242,855 bytes in 3598.52s; 596 stations; 54,964,866 observations</title></circle>
+<circle cx="668.6" cy="374.3" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big filtered; Prime ascii: 31,034 B/s; 97,806,390 bytes in 3151.64s; 577 stations; 46,993,384 observations</title></circle>
+<circle cx="407.1" cy="354.5" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Smaller; Prime ascii: 42,125 B/s; 21,022,687 bytes in 499.05s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="107.4" cy="367.1" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Small; Prime ascii: 34,663 B/s; 1,959,054 bytes in 56.52s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="407.1" cy="357.7" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller; Prime ascii: 40,125 B/s; 21,033,470 bytes in 524.20s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="340.2" cy="371.3" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/MoTIe; Prime ascii: 32,499 B/s; 10,672,364 bytes in 328.39s; 6 stations; 5,185,405 observations</title></circle>
+<circle cx="107.4" cy="369.6" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Small; Prime ascii: 33,393 B/s; 1,962,706 bytes in 58.78s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="328.5" cy="364.1" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Prime ascii: 36,344 B/s; 10,545,694 bytes in 290.17s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="221.4" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Legacy ascii: 330,420 B/s; 14,785,521 bytes in 44.75s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="241.7" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH ASCII repeat 1; Legacy ascii: 241,375 B/s; 14,786,192 bytes in 61.26s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="240.5" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH ASCII repeat 2; Legacy ascii: 245,991 B/s; 14,786,192 bytes in 60.11s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="221.7" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH ASCII repeat 3; Legacy ascii: 328,914 B/s; 14,786,192 bytes in 44.95s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="286.6" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH ASCII repeat 4; Legacy ascii: 120,474 B/s; 14,786,192 bytes in 122.73s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="217.8" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH ASCII repeat 5; Legacy ascii: 349,275 B/s; 14,786,192 bytes in 42.33s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="286.3" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-22; Production Smaller EC_raw/BCH ASCII run 1; Legacy ascii: 120,987 B/s; 14,786,749 bytes in 122.22s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="260.2" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-22; Production Smaller EC_raw/BCH ASCII run 2; Legacy ascii: 181,238 B/s; 14,786,749 bytes in 81.59s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="211.0" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-22; Production Smaller EC_raw/BCH ASCII run 3; Legacy ascii: 388,138 B/s; 14,786,749 bytes in 38.10s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="211.6" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-22; Production Smaller EC_raw/BCH ASCII run 4; Legacy ascii: 384,678 B/s; 14,786,749 bytes in 38.44s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="215.4" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-22; Production Smaller EC_raw/BCH ASCII run 5; Legacy ascii: 362,521 B/s; 14,786,749 bytes in 40.79s; 17 stations; 4,792,860 observations</title></circle>
+<text x="760.0" y="92.0" font-family="sans-serif" font-size="17" font-weight="bold">CSV</text>
+<line x1="760.0" y1="447.5" x2="1370.0" y2="447.5" stroke="#e2e2e2"/>
+<text x="752.0" y="451.5" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">10,000</text>
+<line x1="760.0" y1="376.5" x2="1370.0" y2="376.5" stroke="#e2e2e2"/>
+<text x="752.0" y="380.5" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">30,000</text>
+<line x1="760.0" y1="298.7" x2="1370.0" y2="298.7" stroke="#e2e2e2"/>
+<text x="752.0" y="302.7" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">100,000</text>
+<line x1="760.0" y1="227.6" x2="1370.0" y2="227.6" stroke="#e2e2e2"/>
+<text x="752.0" y="231.6" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">300,000</text>
+<line x1="760.0" y1="149.8" x2="1370.0" y2="149.8" stroke="#e2e2e2"/>
+<text x="752.0" y="153.8" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">1,000,000</text>
+<line x1="760.0" y1="105.0" x2="760.0" y2="447.5" stroke="#777"/>
+<line x1="760.0" y1="447.5" x2="1370.0" y2="447.5" stroke="#777"/>
+<line x1="760.0" y1="105.0" x2="760.0" y2="447.5" stroke="#eeeeee"/>
+<line x1="923.7" y1="105.0" x2="923.7" y2="447.5" stroke="#eeeeee"/>
+<line x1="1103.1" y1="105.0" x2="1103.1" y2="447.5" stroke="#eeeeee"/>
+<line x1="1266.7" y1="105.0" x2="1266.7" y2="447.5" stroke="#eeeeee"/>
+<polyline points="772.4,220.5 993.5,217.8 1005.2,214.1 1072.1,206.9 1333.6,225.9 1356.9,225.6" fill="none" stroke="#1769aa" stroke-width="2.5"/>
+<circle cx="1356.9" cy="225.6" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big; Prime csv: 309,525 B/s; 105,422,908 bytes in 340.60s; 596 stations; 54,964,866 observations</title></circle>
+<circle cx="1333.6" cy="225.9" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big filtered; Prime csv: 307,991 B/s; 92,452,508 bytes in 300.18s; 577 stations; 46,993,384 observations</title></circle>
+<circle cx="1072.1" cy="205.8" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Smaller; Prime csv: 420,837 B/s; 20,365,034 bytes in 48.39s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="772.4" cy="218.9" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Small; Prime csv: 343,580 B/s; 1,849,647 bytes in 5.38s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="1072.1" cy="208.1" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller; Prime csv: 405,616 B/s; 20,374,677 bytes in 50.23s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="1005.2" cy="214.1" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/MoTIe; Prime csv: 369,766 B/s; 9,766,436 bytes in 26.41s; 6 stations; 5,185,405 observations</title></circle>
+<circle cx="772.4" cy="222.1" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Small; Prime csv: 326,945 B/s; 1,853,050 bytes in 5.67s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="993.5" cy="217.8" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Prime csv: 349,321 B/s; 10,203,834 bytes in 29.21s; 17 stations; 4,792,860 observations</title></circle>
+<text x="95.0" y="489.5" font-family="sans-serif" font-size="17" font-weight="bold">XLSX</text>
+<line x1="95.0" y1="845.0" x2="705.0" y2="845.0" stroke="#e2e2e2"/>
+<text x="87.0" y="849.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">10,000</text>
+<line x1="95.0" y1="774.0" x2="705.0" y2="774.0" stroke="#e2e2e2"/>
+<text x="87.0" y="778.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">30,000</text>
+<line x1="95.0" y1="696.2" x2="705.0" y2="696.2" stroke="#e2e2e2"/>
+<text x="87.0" y="700.2" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">100,000</text>
+<line x1="95.0" y1="625.1" x2="705.0" y2="625.1" stroke="#e2e2e2"/>
+<text x="87.0" y="629.1" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">300,000</text>
+<line x1="95.0" y1="547.3" x2="705.0" y2="547.3" stroke="#e2e2e2"/>
+<text x="87.0" y="551.3" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">1,000,000</text>
+<line x1="95.0" y1="502.5" x2="95.0" y2="845.0" stroke="#777"/>
+<line x1="95.0" y1="845.0" x2="705.0" y2="845.0" stroke="#777"/>
+<line x1="95.0" y1="502.5" x2="95.0" y2="845.0" stroke="#eeeeee"/>
+<text x="95.0" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">1M</text>
+<line x1="258.7" y1="502.5" x2="258.7" y2="845.0" stroke="#eeeeee"/>
+<text x="258.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">3M</text>
+<line x1="438.1" y1="502.5" x2="438.1" y2="845.0" stroke="#eeeeee"/>
+<text x="438.1" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">10M</text>
+<line x1="601.7" y1="502.5" x2="601.7" y2="845.0" stroke="#eeeeee"/>
+<text x="601.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">30M</text>
+<polyline points="107.4,571.9 328.5,573.6 407.1,549.9 668.6,560.0 691.9,559.0" fill="none" stroke="#1769aa" stroke-width="2.5"/>
+<circle cx="691.9" cy="559.0" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big; Prime xlsx: 834,866 B/s; 306,853,182 bytes in 367.55s; 596 stations; 54,964,866 observations</title></circle>
+<circle cx="668.6" cy="560.0" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big filtered; Prime xlsx: 821,289 B/s; 266,861,319 bytes in 324.93s; 577 stations; 46,993,384 observations</title></circle>
+<circle cx="407.1" cy="549.9" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Smaller; Prime xlsx: 960,708 B/s; 49,743,862 bytes in 51.78s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="107.4" cy="552.9" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Small; Prime xlsx: 917,397 B/s; 5,475,356 bytes in 5.97s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="107.4" cy="598.8" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Small; Prime xlsx: 450,770 B/s; 5,718,098 bytes in 12.69s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="328.5" cy="598.6" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Prime xlsx: 452,227 B/s; 29,524,455 bytes in 65.29s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="555.7" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH RustPy XLSX; Prime xlsx: 878,437 B/s; 27,928,267 bytes in 31.79s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="624.7" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Legacy xlsx: 301,834 B/s; 41,370,900 bytes in 137.07s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="328.5" cy="652.7" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-21; Smaller EC_raw/BCH RustPy XLSX; Legacy xlsx: 195,891 B/s; 41,372,399 bytes in 211.20s; 17 stations; 4,792,860 observations</title></circle>
+<text x="760.0" y="489.5" font-family="sans-serif" font-size="17" font-weight="bold">NC</text>
+<line x1="760.0" y1="845.0" x2="1370.0" y2="845.0" stroke="#e2e2e2"/>
+<text x="752.0" y="849.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">10,000</text>
+<line x1="760.0" y1="774.0" x2="1370.0" y2="774.0" stroke="#e2e2e2"/>
+<text x="752.0" y="778.0" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">30,000</text>
+<line x1="760.0" y1="696.2" x2="1370.0" y2="696.2" stroke="#e2e2e2"/>
+<text x="752.0" y="700.2" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">100,000</text>
+<line x1="760.0" y1="625.1" x2="1370.0" y2="625.1" stroke="#e2e2e2"/>
+<text x="752.0" y="629.1" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">300,000</text>
+<line x1="760.0" y1="547.3" x2="1370.0" y2="547.3" stroke="#e2e2e2"/>
+<text x="752.0" y="551.3" text-anchor="end" font-family="sans-serif" font-size="10" fill="#555">1,000,000</text>
+<line x1="760.0" y1="502.5" x2="760.0" y2="845.0" stroke="#777"/>
+<line x1="760.0" y1="845.0" x2="1370.0" y2="845.0" stroke="#777"/>
+<line x1="760.0" y1="502.5" x2="760.0" y2="845.0" stroke="#eeeeee"/>
+<text x="760.0" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">1M</text>
+<line x1="923.7" y1="502.5" x2="923.7" y2="845.0" stroke="#eeeeee"/>
+<text x="923.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">3M</text>
+<line x1="1103.1" y1="502.5" x2="1103.1" y2="845.0" stroke="#eeeeee"/>
+<text x="1103.1" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">10M</text>
+<line x1="1266.7" y1="502.5" x2="1266.7" y2="845.0" stroke="#eeeeee"/>
+<text x="1266.7" y="863.0" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#555">30M</text>
+<polyline points="772.4,587.6 993.5,582.0 1005.2,607.9 1072.1,580.0 1333.6,588.4 1356.9,587.8" fill="none" stroke="#1769aa" stroke-width="2.5"/>
+<circle cx="1356.9" cy="587.8" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big; Prime nc: 534,464 B/s; 151,158,524 bytes in 282.82s; 596 stations; 54,964,866 observations</title></circle>
+<circle cx="1333.6" cy="588.4" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Big filtered; Prime nc: 529,311 B/s; 133,412,299 bytes in 252.05s; 577 stations; 46,993,384 observations</title></circle>
+<circle cx="1072.1" cy="573.2" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Smaller; Prime nc: 670,083 B/s; 26,543,283 bytes in 39.61s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="772.4" cy="587.8" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-14; Small; Prime nc: 534,265 B/s; 2,347,948 bytes in 4.39s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="1072.1" cy="587.6" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller; Prime nc: 535,878 B/s; 26,557,522 bytes in 49.56s; 125 stations; 8,122,597 observations</title></circle>
+<circle cx="1005.2" cy="607.9" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/MoTIe; Prime nc: 391,428 B/s; 10,556,255 bytes in 26.97s; 6 stations; 5,185,405 observations</title></circle>
+<circle cx="772.4" cy="587.3" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Small; Prime nc: 538,491 B/s; 2,352,234 bytes in 4.37s; 4 stations; 1,086,886 observations</title></circle>
+<circle cx="993.5" cy="582.0" r="4" fill="#1769aa" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Prime nc: 584,611 B/s; 13,619,618 bytes in 23.30s; 17 stations; 4,792,860 observations</title></circle>
+<circle cx="993.5" cy="726.1" r="4" fill="#d1495b" stroke="white" stroke-width="1.2"><title>2026-08-20; Smaller EC_raw/BCH; Legacy nc: 62,963 B/s; 16,430,059 bytes in 260.95s; 17 stations; 4,792,860 observations</title></circle>
+<text x="24.0" y="460.0" transform="rotate(-90 24 460.0)" text-anchor="middle" font-family="sans-serif" font-size="13">Bytes / second</text>
+<text x="700.0" y="908.0" text-anchor="middle" font-family="sans-serif" font-size="13">Frontend approximate observation count</text>
+<line x1="1155" y1="31" x2="1180" y2="31" stroke="#1769aa" stroke-width="3"/>
+<text x="1186.0" y="35.0" font-family="sans-serif" font-size="12">Prime</text>
+<line x1="1260" y1="31" x2="1285" y2="31" stroke="#d1495b" stroke-width="3"/>
+<text x="1291.0" y="35.0" font-family="sans-serif" font-size="12">Legacy</text>
+</svg>

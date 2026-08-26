@@ -1106,13 +1106,15 @@ files = [
 
 [[package]]
 name = "pycds"
-version = "5.0.1"
+version = "5.1.0"
 description = "An ORM representation of the PCDS and CRMP database"
 optional = false
 python-versions = ">=3.9,<3.14"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "pycds-5.1.0-py3-none-any.whl", hash = "sha256:221e4a1fbf4d894550126be27eeb9ac0636038ababfeed1d41b98ba36490791e"},
+    {file = "pycds-5.1.0.tar.gz", hash = "sha256:4bf1c672d72d339643158721916d08e6046264fb8cc809973654a3f0c12f0196"},
+]
 
 [package.dependencies]
 alembic = ">=1.16"
@@ -1126,10 +1128,9 @@ SQLAlchemy = ">=2.0.0,<3.0"
 dev = ["alembic-verify (>=0.1.4,<0.2.0)", "black (>=24.3.0)", "pytest (>=8.4.0)", "pytest-describe (>=2.1.0)", "pytest-mock (>=3.11.1)", "setuptools (>=72.2.0)", "sqlalchemy-diff (>=0.1.5)", "testing-postgresql (>=1.3.0)"]
 
 [package.source]
-type = "git"
-url = "https://github.com/pacificclimate/pycds.git"
-reference = "improved-obs-indexes"
-resolved_reference = "56af3be88263a612917c37a264f9117085f28038"
+type = "legacy"
+url = "https://pypi.pacificclimate.org/simple"
+reference = "pcic-pypi"
 
 [[package]]
 name = "pydap"
@@ -2248,4 +2249,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.14"
-content-hash = "8c043cddbfaa7e6578ee670433104db74032aa837a7a339b980659450422ad6e"
+content-hash = "b28fe33e5ef10f1f8d4744b71be6777d93d1c637a8368d58ad8b0581cdb69ae7"

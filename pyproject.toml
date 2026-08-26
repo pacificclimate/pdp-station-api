@@ -13,7 +13,7 @@ numpy = ">=2.0"
 h5netcdf = ">=1.6,<2"
 h5py = ">=3.12,<4"
 psycopg2 = ">=2.9.10,<3"
-pycds = { git = "https://github.com/pacificclimate/pycds.git", branch = "improved-obs-indexes" }
+pycds = { version = "5.1.0", source = "pcic-pypi" }
 pydap = { git = "https://github.com/pydap/pydap.git", branch = "main" }
 sqlalchemy = ">=2.0,<3"
 shapely = ">=2.1,<3"
@@ -21,6 +21,11 @@ starlette = ">=0.47,<1"
 uvicorn = { version = ">=0.35,<1", extras = ["standard"] }
 xlsxwriter = ">=3.2,<4"
 rustpy-xlsxwriter = ">=0.5,<0.6"
+
+[[tool.poetry.source]]
+name = "pcic-pypi"
+url = "https://pypi.pacificclimate.org/simple/"
+priority = "supplemental"
 
 [tool.poetry.group.dev.dependencies]
 httpx = ">=0.28,<1"

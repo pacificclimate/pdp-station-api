@@ -5,6 +5,7 @@ from html import escape
 import re
 from collections.abc import Callable, Iterator
 from datetime import datetime
+from time import perf_counter
 from typing import Any
 
 import numpy as np
@@ -60,14 +61,19 @@ class StationRows(IterData):
         self.ifilter = ifilter or []
         self.imap = imap or []
         self.islice = islice or []
+        self.normalization_seconds = 0.0
 
     @property
     def stream(self):
         for row in self.row_factory():
-            values = tuple(row)
-            if values and isinstance(values[0], datetime):
-                values = (values[0].isoformat(), *values[1:])
-            values = tuple(np.nan if value is None else value for value in values)
+            started = perf_counter()
+            try:
+                values = tuple(row)
+                if values and isinstance(values[0], datetime):
+                    values = (values[0].isoformat(), *values[1:])
+                values = tuple(np.nan if value is None else value for value in values)
+            finally:
+                self.normalization_seconds += perf_counter() - started
             yield values
 
     @property

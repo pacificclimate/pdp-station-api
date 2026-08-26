@@ -301,7 +301,7 @@ def test_midstream_error_logs_request_and_station(caplog):
     assert error.exc_info is not None
 
 
-def test_aggregate_can_use_rustpy_xlsx_engine():
+def test_aggregate_logs_per_phase_timing(caplog):
     repository = FakeAggregateRepository()
     service = StationDatasetService(repository)
     prepared = prepare_archive(
@@ -310,16 +310,59 @@ def test_aggregate_can_use_rustpy_xlsx_engine():
         max_stations=10,
     )
 
-    archive = b"".join(
-        stream_archive(
-            service,
-            prepared,
-            spool_max_size=1024,
-            xlsx_engine="rustpy",
-        )
+    with caplog.at_level(logging.DEBUG, logger="pdp_station.aggregate"):
+        list(stream_archive(service, prepared, spool_max_size=1024))
+
+    timing = next(
+        record for record in caplog.records if "first_row=" in record.getMessage()
     )
+    assert timing.aggregate_request_id == prepared.request_id
+    assert timing.station_id == 42
+    assert timing.aggregate_row_count == 3
+    assert timing.aggregate_uncompressed_bytes > 0
+    assert timing.aggregate_query_seconds >= 0
+    assert timing.aggregate_first_row_seconds >= 0
+    assert timing.aggregate_remaining_rows_seconds >= 0
+    assert timing.aggregate_query_seconds == pytest.approx(
+        timing.aggregate_first_row_seconds + timing.aggregate_remaining_rows_seconds
+    )
+    assert timing.aggregate_serialization_seconds > 0
+    assert timing.aggregate_zip_seconds >= 0
+    xlsx_timing = next(
+        record for record in caplog.records if "XLSX timing" in record.getMessage()
+    )
+    assert xlsx_timing.aggregate_xlsx_metadata_seconds >= 0
+    assert xlsx_timing.aggregate_xlsx_normalization_seconds > 0
+    assert xlsx_timing.aggregate_xlsx_write_seconds >= 0
+    assert xlsx_timing.aggregate_xlsx_finalize_seconds >= 0
+    assert xlsx_timing.aggregate_xlsx_copy_seconds >= 0
+    assert xlsx_timing.aggregate_xlsx_engine == "xlsxwriter"
+
+
+def test_aggregate_can_use_rustpy_xlsx_engine(caplog):
+    repository = FakeAggregateRepository()
+    service = StationDatasetService(repository)
+    prepared = prepare_archive(
+        service,
+        AggregateSelection(networks=("FLNRO-WMB",), data_format="xlsx"),
+        max_stations=10,
+    )
+
+    with caplog.at_level(logging.DEBUG, logger="pdp_station.aggregate"):
+        archive = b"".join(
+            stream_archive(
+                service,
+                prepared,
+                spool_max_size=1024,
+                xlsx_engine="rustpy",
+            )
+        )
 
     workbook_data = ZipFile(BytesIO(archive)).read("FLNRO-WMB/1002.xlsx")
     workbook = openpyxl.load_workbook(BytesIO(workbook_data), read_only=True)
     assert workbook["station_observations"]["B2"].value == 1.0
     workbook.close()
+    xlsx_timing = next(
+        record for record in caplog.records if "XLSX timing" in record.getMessage()
+    )
+    assert xlsx_timing.aggregate_xlsx_engine == "rustpy"

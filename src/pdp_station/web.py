@@ -224,7 +224,9 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
     if repository is None:
         settings = settings or Settings.from_environment()
         repository = create_repository(
-            settings.database_url, yield_per=settings.database_yield_per
+            settings.database_url,
+            yield_per=settings.database_yield_per,
+            explain_analyze_station_ids=settings.explain_analyze_station_ids,
         )
     service = StationDatasetService(repository)
     spool_max_size = settings.spool_max_size if settings is not None else 1 << 30

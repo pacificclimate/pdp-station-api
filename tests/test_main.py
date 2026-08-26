@@ -37,6 +37,13 @@ def test_logging_config_reuses_uvicorn_formatter_and_handler():
     assert config["formatters"]["default"]["()"] == ("uvicorn.logging.DefaultFormatter")
 
 
+def test_database_yield_per_defaults_to_ten_thousand(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.delenv("PDP_STATION_DATABASE_YIELD_PER", raising=False)
+
+    assert Settings.from_environment().database_yield_per == 10_000
+
+
 def test_xlsx_engine_defaults_to_xlsxwriter(monkeypatch):
     monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
     monkeypatch.delenv("PDP_STATION_XLSX_ENGINE", raising=False)
@@ -56,4 +63,38 @@ def test_invalid_xlsx_engine_is_rejected(monkeypatch):
     monkeypatch.setenv("PDP_STATION_XLSX_ENGINE", "unknown")
 
     with pytest.raises(RuntimeError, match="PDP_STATION_XLSX_ENGINE"):
+        Settings.from_environment()
+
+
+def test_database_yield_per_is_configurable(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_DATABASE_YIELD_PER", "100000")
+
+    assert Settings.from_environment().database_yield_per == 100_000
+
+
+@pytest.mark.parametrize("value", ["not-an-integer", "0", "-1"])
+def test_database_yield_per_must_be_a_positive_integer(monkeypatch, value):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_DATABASE_YIELD_PER", value)
+
+    with pytest.raises(RuntimeError, match="PDP_STATION_DATABASE_YIELD_PER"):
+        Settings.from_environment()
+
+
+def test_explain_analyze_station_ids_are_configurable(monkeypatch):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_EXPLAIN_ANALYZE_STATION_IDS", "2338, 3301")
+
+    assert Settings.from_environment().explain_analyze_station_ids == frozenset(
+        {2338, 3301}
+    )
+
+
+@pytest.mark.parametrize("value", ["invalid", "0", "-1"])
+def test_explain_analyze_station_ids_must_be_positive_integers(monkeypatch, value):
+    monkeypatch.setenv("PCDS_DSN", "postgresql://example/database")
+    monkeypatch.setenv("PDP_STATION_EXPLAIN_ANALYZE_STATION_IDS", value)
+
+    with pytest.raises(RuntimeError, match="PDP_STATION_EXPLAIN_ANALYZE_STATION_IDS"):
         Settings.from_environment()

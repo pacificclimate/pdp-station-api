@@ -2,10 +2,12 @@
 
 from collections.abc import Iterator, Mapping
 import csv
+from dataclasses import dataclass
 from io import StringIO
 from itertools import chain
 import math
 from tempfile import SpooledTemporaryFile
+from time import perf_counter
 from typing import Any, BinaryIO
 
 import h5netcdf
@@ -22,6 +24,17 @@ COPY_CHUNK_SIZE = 1024 * 1024
 CSV_CHUNK_SIZE = 1024 * 1024
 EXCEL_MAX_DATA_ROWS = 1_048_575
 NETCDF_BATCH_SIZE = 10_000
+
+
+@dataclass
+class XLSXTiming:
+    """Active time spent assembling each part of an XLSX response."""
+
+    engine: str = "xlsxwriter"
+    metadata_seconds: float = 0.0
+    data_seconds: float = 0.0
+    normalization_seconds: float = 0.0
+    finalize_seconds: float = 0.0
 
 
 def _spool(dataset) -> BinaryIO:
@@ -131,6 +144,7 @@ class XLSXResponse(BaseResponse):
 
     def __init__(self, dataset):
         super().__init__(dataset)
+        self.timing = XLSXTiming()
         self.headers.extend(
             [
                 (
@@ -164,6 +178,7 @@ class XLSXResponse(BaseResponse):
             {"bold": True, "font_color": "white", "bg_color": "#4F81BD"}
         )
 
+        started = perf_counter()
         global_sheet = workbook.add_worksheet("Global attributes")
         global_sheet.write_row(0, 0, ("Attribute", "Value"), header)
         global_attributes = self.dataset.attributes.get(
@@ -187,6 +202,9 @@ class XLSXResponse(BaseResponse):
                         (variable.name, name, _excel_value(value)),
                     )
                     attribute_row += 1
+        self.timing.metadata_seconds = perf_counter() - started
+
+        started = perf_counter()
         for sequence in sequences:
             sheet = workbook.add_worksheet(sequence.name[:31])
             sheet.write_row(0, 0, list(sequence.keys()), header)
@@ -206,12 +224,22 @@ class XLSXResponse(BaseResponse):
                     ):
                         continue
                     sheet.write_number(row_number, column_number, value)
+        self.timing.data_seconds = perf_counter() - started
+        self.timing.normalization_seconds = sum(
+            getattr(sequence.data, "normalization_seconds", 0.0)
+            for sequence in sequences
+        )
+
+        started = perf_counter()
         workbook.close()
+        self.timing.finalize_seconds = perf_counter() - started
         return _chunks(output)
 
     def _iter_rustpy(self):
+        self.timing.engine = "rustpy"
         output = _spool(self.dataset)
         sequences = _sequences(self.dataset)
+        started = perf_counter()
         prepared_sequences = []
         for sequence in sequences:
             rows = iter(sequence.iterdata())
@@ -219,6 +247,7 @@ class XLSXResponse(BaseResponse):
                 first = next(rows)
             except StopIteration:
                 output.close()
+                self.timing.engine = "xlsxwriter-fallback-empty"
                 return self._iter_xlsxwriter()
             prepared_sequences.append((sequence, chain((first,), rows)))
         header = (
@@ -265,6 +294,11 @@ class XLSXResponse(BaseResponse):
             writer.sheet(sequence.name[:31], observation_rows(), header_format=header)
 
         writer.save()
+        self.timing.data_seconds = perf_counter() - started
+        self.timing.normalization_seconds = sum(
+            getattr(sequence.data, "normalization_seconds", 0.0)
+            for sequence in sequences
+        )
         return _chunks(output)
 
 

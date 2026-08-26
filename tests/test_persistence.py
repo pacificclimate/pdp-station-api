@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
+import logging
 from types import SimpleNamespace
 
+from sqlalchemy import column, select
 from sqlalchemy.dialects import postgresql
 
 from pdp_station.application import AggregateSelection
@@ -116,6 +118,34 @@ def test_readiness_returns_relation_and_privilege_failures():
     assert all(check.schema_usage for check in checks)
     assert not any(check.select for check in checks)
     assert not any(check.ready for check in checks)
+
+
+def test_explain_analyze_executes_with_parameters_and_logs_literal_sql(caplog):
+    class ExplainConnection:
+        def exec_driver_sql(self, statement, parameters):
+            self.statement = statement
+            self.parameters = parameters
+            return SimpleNamespace(scalars=lambda: iter(("QUERY PLAN",)))
+
+    connection = ExplainConnection()
+    session = SimpleNamespace(
+        get_bind=lambda: SimpleNamespace(dialect=postgresql.dialect()),
+        connection=lambda: connection,
+    )
+    statement = select(column("datum")).where(column("station_id") == 2338)
+
+    with caplog.at_level(logging.INFO, logger="pdp_station.persistence"):
+        PycdsStationRepository._log_explain_analyze(session, statement, 2338)
+
+    assert connection.statement.startswith(
+        "EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT TEXT) SELECT"
+    )
+    assert 2338 in connection.parameters.values()
+    message = caplog.records[-1].getMessage()
+    assert "station_id=2338" in message
+    assert "WHERE station_id = 2338" in message
+    assert "parameters=" not in message
+    assert "QUERY PLAN" in message
 
 
 def test_aggregate_station_query_uses_postgresql_filter_operators():

@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta, timezone
 from importlib.metadata import version
+import logging
 from typing import Any
 
 from pycds.orm.native_matviews import VarsPerHistory
@@ -55,14 +56,21 @@ REQUIRED_RELATIONS = tuple(
         )
     )
 )
+logger = logging.getLogger(__name__)
 
 
 class PycdsStationRepository:
     """Build and stream a pivoted query for one station."""
 
-    def __init__(self, sessions: sessionmaker[Session], yield_per: int = 1_000):
+    def __init__(
+        self,
+        sessions: sessionmaker[Session],
+        yield_per: int = 10_000,
+        explain_analyze_station_ids: frozenset[int] = frozenset(),
+    ):
         self._sessions = sessions
         self._yield_per = yield_per
+        self._explain_analyze_station_ids = explain_analyze_station_ids
 
     @contextmanager
     def _session(self) -> Iterator[Session]:
@@ -412,14 +420,51 @@ class PycdsStationRepository:
                     Obs.time
                     < datetime.combine(dataset.to_date + timedelta(days=1), time.min)
                 )
+            if dataset.station_id in self._explain_analyze_station_ids:
+                self._log_explain_analyze(session, statement, dataset.station_id)
             statement = statement.execution_options(
                 stream_results=True, yield_per=self._yield_per
             )
             for row in session.execute(statement):
                 yield tuple(row)
 
+    @staticmethod
+    def _log_explain_analyze(session, statement, station_id: int) -> None:
+        compiled = statement.compile(
+            dialect=session.get_bind().dialect,
+            compile_kwargs={"render_postcompile": True},
+        )
+        sql = str(compiled)
+        literal_sql = str(
+            statement.compile(
+                dialect=session.get_bind().dialect,
+                compile_kwargs={
+                    "literal_binds": True,
+                    "render_postcompile": True,
+                },
+            )
+        )
+        plan = session.connection().exec_driver_sql(
+            "EXPLAIN (ANALYZE, BUFFERS, SETTINGS, FORMAT TEXT) " + sql,
+            compiled.params,
+        )
+        logger.info(
+            "query_one_station EXPLAIN ANALYZE station_id=%d\nSQL:\n%s\nPLAN:\n%s",
+            station_id,
+            literal_sql,
+            "\n".join(plan.scalars()),
+        )
 
-def create_repository(database_url: str, yield_per: int = 1_000):
+
+def create_repository(
+    database_url: str,
+    yield_per: int = 10_000,
+    explain_analyze_station_ids: frozenset[int] = frozenset(),
+):
     engine: Engine = create_engine(database_url, pool_pre_ping=True)
     sessions = sessionmaker(engine, expire_on_commit=False)
-    return PycdsStationRepository(sessions, yield_per=yield_per)
+    return PycdsStationRepository(
+        sessions,
+        yield_per=yield_per,
+        explain_analyze_station_ids=explain_analyze_station_ids,
+    )

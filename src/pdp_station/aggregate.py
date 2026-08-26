@@ -10,6 +10,7 @@ from io import StringIO
 import json
 import logging
 from pathlib import PurePosixPath
+from time import perf_counter
 from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -56,6 +57,87 @@ class PreparedAggregate:
     request_id: str
     selection: AggregateSelection
     stations: tuple[PreparedStation, ...]
+
+
+@dataclass
+class StationTiming:
+    query_seconds: float = 0.0
+    first_row_seconds: float = 0.0
+    remaining_rows_seconds: float = 0.0
+    serialization_seconds: float = 0.0
+    xlsx_engine: str | None = None
+    xlsx_metadata_seconds: float = 0.0
+    xlsx_normalization_seconds: float = 0.0
+    xlsx_write_seconds: float = 0.0
+    xlsx_finalize_seconds: float = 0.0
+    xlsx_copy_seconds: float = 0.0
+    zip_seconds: float = 0.0
+    rows: int = 0
+    bytes: int = 0
+
+
+class TimedRows:
+    """Measure active time spent advancing a repository row iterator."""
+
+    def __init__(self, factory, timing: StationTiming):
+        self.factory = factory
+        self.timing = timing
+
+    def __iter__(self):
+        rows = iter(self.factory())
+        try:
+            while True:
+                started = perf_counter()
+                try:
+                    row = next(rows)
+                except StopIteration:
+                    self._record_fetch(perf_counter() - started)
+                    return
+                except Exception:
+                    self._record_fetch(perf_counter() - started)
+                    raise
+                self._record_fetch(perf_counter() - started)
+                self.timing.rows += 1
+                yield row
+        finally:
+            close = getattr(rows, "close", None)
+            if close is not None:
+                close()
+
+    def _record_fetch(self, elapsed: float) -> None:
+        self.timing.query_seconds += elapsed
+        if self.timing.rows == 0:
+            self.timing.first_row_seconds += elapsed
+        else:
+            self.timing.remaining_rows_seconds += elapsed
+
+
+class TimedZipMember:
+    """Measure active time spent writing and finalizing one ZIP member."""
+
+    def __init__(self, member, timing: StationTiming):
+        self.member = member
+        self.timing = timing
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        self.close()
+
+    def write(self, chunk):
+        started = perf_counter()
+        try:
+            return self.member.write(chunk)
+        finally:
+            self.timing.zip_seconds += perf_counter() - started
+
+    def close(self):
+        started = perf_counter()
+        try:
+            self.member.close()
+        finally:
+            self.timing.zip_seconds += perf_counter() - started
 
 
 def _first(values: Mapping[str, Any], *names: str, default=None):
@@ -199,7 +281,9 @@ def prepare_archive(
         extra=extra,
     )
     try:
+        selection_started = perf_counter()
         stations = service.repository.aggregate_stations(selection)
+        selection_seconds = perf_counter() - selection_started
         logger.debug(
             "Aggregate request %s selected %d stations",
             request_id,
@@ -212,6 +296,7 @@ def prepare_archive(
             )
 
         prepared = []
+        metadata_seconds = 0.0
         for station in stations:
             station_extra = {
                 **extra,
@@ -227,9 +312,13 @@ def prepare_archive(
                 station.station_id,
                 extra=station_extra,
             )
-            description = service.station(
-                station.station_id, climatology=selection.climatology
-            )
+            metadata_started = perf_counter()
+            try:
+                description = service.station(
+                    station.station_id, climatology=selection.climatology
+                )
+            finally:
+                metadata_seconds += perf_counter() - metadata_started
             if selection.clip_dates:
                 description = replace(
                     description,
@@ -253,9 +342,18 @@ def prepare_archive(
         )
         raise
     logger.debug(
-        "Aggregate request %s preflight completed",
+        "Aggregate request %s preflight timing selection=%.6fs "
+        "metadata=%.6fs stations=%d",
         request_id,
-        extra=extra,
+        selection_seconds,
+        metadata_seconds,
+        len(prepared),
+        extra={
+            **extra,
+            "aggregate_selection_seconds": selection_seconds,
+            "aggregate_metadata_seconds": metadata_seconds,
+            "aggregate_station_count": len(prepared),
+        },
     )
     return PreparedAggregate(request_id, selection, tuple(prepared))
 
@@ -342,20 +440,148 @@ def stream_archive(
                 network = _archive_component(station.network)
                 native_id = _archive_component(station.native_id)
                 filename = str(PurePosixPath(network, f"{native_id}.{extension}"))
-                with archive.open(filename, "w", force_zip64=True) as member:
-                    yield from output.drain()
-                    dataset = build_dataset(
-                        description,
-                        lambda description=description: service.repository.rows(
-                            description
-                        ),
-                    )
-                    dataset._pcds_spool_max_size = spool_max_size
-                    dataset._pcds_xlsx_engine = xlsx_engine
-                    for chunk in response_type(dataset):
-                        member.write(chunk)
+                timing = StationTiming()
+                try:
+                    with TimedZipMember(
+                        archive.open(filename, "w", force_zip64=True), timing
+                    ) as member:
                         yield from output.drain()
-                yield from output.drain()
+                        timed_rows = TimedRows(
+                            lambda description=description: service.repository.rows(
+                                description
+                            ),
+                            timing,
+                        )
+                        dataset = build_dataset(description, lambda: iter(timed_rows))
+                        dataset._pcds_spool_max_size = spool_max_size
+                        dataset._pcds_xlsx_engine = xlsx_engine
+                        response_seconds = 0.0
+                        response_object = response_type(dataset)
+                        response = None
+                        try:
+                            response_started = perf_counter()
+                            try:
+                                response = iter(response_object)
+                            finally:
+                                response_seconds += perf_counter() - response_started
+                            while True:
+                                response_started = perf_counter()
+                                try:
+                                    chunk = next(response)
+                                except StopIteration:
+                                    response_seconds += (
+                                        perf_counter() - response_started
+                                    )
+                                    break
+                                except Exception:
+                                    response_seconds += (
+                                        perf_counter() - response_started
+                                    )
+                                    raise
+                                response_seconds += perf_counter() - response_started
+                                timing.bytes += len(chunk)
+                                member.write(chunk)
+                                yield from output.drain()
+                        finally:
+                            close = getattr(response, "close", None)
+                            if close is not None:
+                                close()
+                            timing.serialization_seconds = max(
+                                0.0, response_seconds - timing.query_seconds
+                            )
+                            xlsx_timing = getattr(response_object, "timing", None)
+                            if xlsx_timing is not None:
+                                timing.xlsx_engine = xlsx_timing.engine
+                                timing.xlsx_metadata_seconds = (
+                                    xlsx_timing.metadata_seconds
+                                )
+                                timing.xlsx_normalization_seconds = (
+                                    xlsx_timing.normalization_seconds
+                                )
+                                timing.xlsx_write_seconds = max(
+                                    0.0,
+                                    xlsx_timing.data_seconds
+                                    - timing.query_seconds
+                                    - timing.xlsx_normalization_seconds,
+                                )
+                                timing.xlsx_finalize_seconds = (
+                                    xlsx_timing.finalize_seconds
+                                )
+                                timing.xlsx_copy_seconds = max(
+                                    0.0,
+                                    timing.serialization_seconds
+                                    - timing.xlsx_metadata_seconds
+                                    - timing.xlsx_normalization_seconds
+                                    - timing.xlsx_write_seconds
+                                    - timing.xlsx_finalize_seconds,
+                                )
+                    yield from output.drain()
+                finally:
+                    logger.debug(
+                        "Aggregate request %s station %s/%s (%d) timing "
+                        "query=%.6fs first_row=%.6fs remaining_rows=%.6fs "
+                        "serialization=%.6fs zip=%.6fs rows=%d bytes=%d",
+                        request_id,
+                        station.network,
+                        station.native_id,
+                        station.station_id,
+                        timing.query_seconds,
+                        timing.first_row_seconds,
+                        timing.remaining_rows_seconds,
+                        timing.serialization_seconds,
+                        timing.zip_seconds,
+                        timing.rows,
+                        timing.bytes,
+                        extra={
+                            **station_extra,
+                            "aggregate_query_seconds": timing.query_seconds,
+                            "aggregate_first_row_seconds": (timing.first_row_seconds),
+                            "aggregate_remaining_rows_seconds": (
+                                timing.remaining_rows_seconds
+                            ),
+                            "aggregate_serialization_seconds": (
+                                timing.serialization_seconds
+                            ),
+                            "aggregate_zip_seconds": timing.zip_seconds,
+                            "aggregate_row_count": timing.rows,
+                            "aggregate_uncompressed_bytes": timing.bytes,
+                        },
+                    )
+                    if timing.xlsx_engine is not None:
+                        logger.debug(
+                            "Aggregate request %s station %s/%s (%d) XLSX timing "
+                            "engine=%s metadata=%.6fs normalization=%.6fs write=%.6fs "
+                            "finalize=%.6fs copy=%.6fs",
+                            request_id,
+                            station.network,
+                            station.native_id,
+                            station.station_id,
+                            timing.xlsx_engine,
+                            timing.xlsx_metadata_seconds,
+                            timing.xlsx_normalization_seconds,
+                            timing.xlsx_write_seconds,
+                            timing.xlsx_finalize_seconds,
+                            timing.xlsx_copy_seconds,
+                            extra={
+                                **station_extra,
+                                "aggregate_xlsx_engine": timing.xlsx_engine,
+                                "aggregate_xlsx_metadata_seconds": (
+                                    timing.xlsx_metadata_seconds
+                                ),
+                                "aggregate_xlsx_normalization_seconds": (
+                                    timing.xlsx_normalization_seconds
+                                ),
+                                "aggregate_xlsx_write_seconds": (
+                                    timing.xlsx_write_seconds
+                                ),
+                                "aggregate_xlsx_finalize_seconds": (
+                                    timing.xlsx_finalize_seconds
+                                ),
+                                "aggregate_xlsx_copy_seconds": (
+                                    timing.xlsx_copy_seconds
+                                ),
+                            },
+                        )
                 logger.debug(
                     "Aggregate request %s completed station %s/%s (%d)",
                     request_id,

@@ -25,6 +25,35 @@ poetry run pytest
 PCDS_DSN=postgresql+psycopg2://user:password@host/database poetry run pdp-station-api
 ```
 
+Database rows are fetched in batches of 10,000 by default. Set
+`PDP_STATION_DATABASE_YIELD_PER` to a positive row count to tune the tradeoff
+between database round trips and memory use. For example, a performance test
+with generous container memory can use:
+
+```console
+PDP_STATION_DATABASE_YIELD_PER=100000 \
+PCDS_DSN=postgresql+psycopg2://user:password@host/database \
+poetry run pdp-station-api
+```
+
+The setting is a row count, not a byte limit. Pivoted rows become wider as a
+station has more variables, so the memory represented by 100,000 rows varies
+between stations.
+
+For targeted query-plan diagnostics, set a comma-separated list of numeric
+station IDs in `PDP_STATION_EXPLAIN_ANALYZE_STATION_IDS`. The service logs the
+exact SQL, parameters, and PostgreSQL `EXPLAIN (ANALYZE, BUFFERS, SETTINGS)`
+plan before retrieving each selected station. For example:
+
+```console
+PDP_STATION_EXPLAIN_ANALYZE_STATION_IDS=2338,3301
+```
+
+This option executes each selected observation query twice: once to produce
+the plan and once to produce the download. It should be enabled temporarily
+and only for specific stations. The analysis also warms PostgreSQL's cache, so
+the subsequent download timing is not an unbiased cold-query measurement.
+
 ## Container image
 
 Build and run the production image locally with:
@@ -97,7 +126,9 @@ are limited to 1,048,575 observations plus their header row.
 Excel generation uses Python XlsxWriter by default. Set
 `PDP_STATION_XLSX_ENGINE=rustpy` to use the experimental Rust-backed
 `rustpy-xlsxwriter` engine for direct and aggregate XLSX downloads. The default
-can be selected explicitly with `PDP_STATION_XLSX_ENGINE=xlsxwriter`.
+can be selected explicitly with `PDP_STATION_XLSX_ENGINE=xlsxwriter`. Debug XLSX
+timing records include the selected engine so equivalent requests can be
+compared directly.
 If a constraint produces no observation rows, the Rust-backed path delegates
 that workbook to XlsxWriter so the data sheet still contains its column header
 row.
@@ -150,6 +181,18 @@ share this identifier. Mid-stream failures are logged at error level with a
 traceback and the active station's numeric ID, network, and native ID, allowing
 a truncated client download to be correlated with server logs without logging
 the polygon or other raw request parameters.
+
+Debug logs also report preflight selection and metadata timing. For each
+station they report time to the first query row, time retrieving the remaining
+rows, time serializing the requested format, and time writing and finalizing
+the ZIP member, together with row and uncompressed-byte counts. The `query`
+value is the sum of `first_row` and `remaining_rows`. Time suspended while
+waiting for the client to consume a streamed chunk is deliberately excluded.
+Excel responses add a second timing record that separates metadata generation,
+PyDAP row normalization, XlsxWriter cell and XML generation, workbook
+finalization, and copying the completed XLSX from its spool. The XLSX `write`
+value excludes the separately measured database iteration and normalization
+times.
 
 The service also provides a small HTML catalog. `/` lists published networks,
 and `/networks/{network}` lists that network's published stations. Station

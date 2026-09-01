@@ -10,6 +10,13 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.4
+
+*Release Date: 2026-Sep-01*
+
+Fix aggregate requests with variable filters by using compatible PostgreSQL
+array types.
+
 ## 0.1.3
 
 *Release Date: 2026-Sep-01*

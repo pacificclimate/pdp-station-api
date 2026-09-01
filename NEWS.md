@@ -10,6 +10,12 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.2
+
+*Release Date: 2026-Sep-01*
+
+Remove the station limit in /agg response
+
 ## 0.1.1
 
 *Release Date: 2026-Aug-26*

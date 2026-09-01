@@ -10,6 +10,13 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.3
+
+*Release Date: 2026-Sep-01*
+
+Remove performance-investigation dependencies that were inadvertently included
+in the project metadata.
+
 ## 0.1.2
 
 *Release Date: 2026-Sep-01*

@@ -141,8 +141,7 @@ finalization before their bytes can be read.
 
 Once the ZIP signature has been sent, an observation-query or serialization
 failure can only terminate the download; it cannot be changed into an HTTP
-error response. `PDP_STATION_AGGREGATE_MAX_STATIONS` limits a selection to 1,000
-stations by default.
+error response.
 
 Aggregate generation logs a 16-character SHA-256 fingerprint of the normalized
 request at debug level. Preflight, station retrieval, and completion messages

@@ -22,7 +22,6 @@ from pdp_station.aggregate import (
     request_fingerprint,
     stream_archive,
 )
-from pdp_station.config import Settings
 from pdp_station.web import create_app
 
 
@@ -220,25 +219,12 @@ def test_aggregate_options_advertises_query_content_types():
     assert "application/json" in response.headers["accept-query"]
 
 
-def test_aggregate_station_limit_is_configurable():
-    settings = Settings("unused", aggregate_max_stations=1)
-    client = TestClient(
-        create_app(settings=settings, repository=FakeAggregateRepository())
-    )
-
-    response = client.get("/agg?data-format=nc")
-
-    assert response.status_code == 422
-    assert "Selection contains 2 stations; limit is 1" == response.json()["error"]
-
-
 def test_metadata_is_preflighted_but_rows_start_after_zip_signature():
     repository = FakeAggregateRepository()
     service = StationDatasetService(repository)
     prepared = prepare_archive(
         service,
         AggregateSelection(networks=("FLNRO-WMB",), data_format="ascii"),
-        max_stations=10,
     )
 
     assert repository.describe_calls == 1
@@ -280,7 +266,6 @@ def test_midstream_error_logs_request_and_station(caplog):
     prepared = prepare_archive(
         service,
         AggregateSelection(networks=("FLNRO-WMB",), data_format="ascii"),
-        max_stations=10,
     )
 
     with caplog.at_level(logging.DEBUG, logger="pdp_station.aggregate"):
@@ -307,7 +292,6 @@ def test_aggregate_can_use_rustpy_xlsx_engine():
     prepared = prepare_archive(
         service,
         AggregateSelection(networks=("FLNRO-WMB",), data_format="xlsx"),
-        max_stations=10,
     )
 
     archive = b"".join(

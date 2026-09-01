@@ -41,10 +41,6 @@ class AggregateRequestError(ValueError):
     """An aggregate request contains invalid or unsupported parameters."""
 
 
-class TooManyStationsError(AggregateRequestError):
-    """An aggregate selection exceeds the configured station limit."""
-
-
 @dataclass(frozen=True)
 class PreparedStation:
     station: AggregateStation
@@ -186,8 +182,6 @@ def _variable_index(descriptions) -> bytes:
 def prepare_archive(
     service: StationDatasetService,
     selection: AggregateSelection,
-    *,
-    max_stations: int,
 ) -> PreparedAggregate:
     """Resolve and describe stations without querying observation rows."""
     request_id = request_fingerprint(selection)
@@ -206,11 +200,6 @@ def prepare_archive(
             len(stations),
             extra=extra,
         )
-        if len(stations) > max_stations:
-            raise TooManyStationsError(
-                f"Selection contains {len(stations)} stations; limit is {max_stations}"
-            )
-
         prepared = []
         for station in stations:
             station_extra = {

@@ -184,7 +184,6 @@ async def _aggregate_parameters(request):
 def _aggregate_endpoint(
     service: StationDatasetService,
     spool_max_size: int,
-    max_stations: int,
     xlsx_engine: str,
 ):
     async def endpoint(request):
@@ -201,7 +200,6 @@ def _aggregate_endpoint(
                 prepare_archive,
                 service,
                 selection,
-                max_stations=max_stations,
             )
         except AggregateRequestError as exc:
             return JSONResponse({"error": str(exc)}, status_code=422, headers=headers)
@@ -228,9 +226,6 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
         )
     service = StationDatasetService(repository)
     spool_max_size = settings.spool_max_size if settings is not None else 1 << 30
-    aggregate_max_stations = (
-        settings.aggregate_max_stations if settings is not None else 1_000
-    )
     xlsx_engine = settings.xlsx_engine if settings is not None else "xlsxwriter"
     dap = StationDapApplication(
         service,
@@ -252,7 +247,6 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 _aggregate_endpoint(
                     service,
                     spool_max_size,
-                    aggregate_max_stations,
                     xlsx_engine,
                 ),
                 methods=["GET", "POST", "QUERY", "OPTIONS"],
@@ -263,7 +257,6 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 _aggregate_endpoint(
                     service,
                     spool_max_size,
-                    aggregate_max_stations,
                     xlsx_engine,
                 ),
                 methods=["GET", "POST", "QUERY", "OPTIONS"],

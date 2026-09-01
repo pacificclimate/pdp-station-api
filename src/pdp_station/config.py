@@ -30,7 +30,6 @@ class Settings:
     database_url: str
     database_yield_per: int = 1_000
     spool_max_size: int = 1 << 30
-    aggregate_max_stations: int = 1_000
     xlsx_engine: str = "xlsxwriter"
 
     @classmethod
@@ -47,18 +46,6 @@ class Settings:
             raise RuntimeError("PDP_STATION_SPOOL_MAX_SIZE must be an integer") from exc
         if spool_max_size < 0:
             raise RuntimeError("PDP_STATION_SPOOL_MAX_SIZE must not be negative")
-        try:
-            aggregate_max_stations = int(
-                os.environ.get("PDP_STATION_AGGREGATE_MAX_STATIONS", "1000")
-            )
-        except ValueError as exc:
-            raise RuntimeError(
-                "PDP_STATION_AGGREGATE_MAX_STATIONS must be an integer"
-            ) from exc
-        if aggregate_max_stations <= 0:
-            raise RuntimeError(
-                "PDP_STATION_AGGREGATE_MAX_STATIONS must be a positive integer"
-            )
         xlsx_engine = (
             os.environ.get("PDP_STATION_XLSX_ENGINE", "xlsxwriter").strip().lower()
         )
@@ -69,6 +56,5 @@ class Settings:
         return cls(
             database_url=database_url,
             spool_max_size=spool_max_size,
-            aggregate_max_stations=aggregate_max_stations,
             xlsx_engine=xlsx_engine,
         )

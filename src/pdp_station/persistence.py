@@ -13,6 +13,7 @@ from pycds.orm.views import CrmpNetworkGeoserver
 from sqlalchemy import (
     Engine,
     String,
+    Text,
     and_,
     cast,
     column,
@@ -367,7 +368,7 @@ class PycdsStationRepository:
         if selection.variables:
             station_variables = cast(
                 func.regexp_split_to_array(catalog.vars, r",\s*"),
-                postgresql.ARRAY(String),
+                postgresql.ARRAY(Text),
             )
             statement = statement.where(
                 station_variables.overlap(postgresql.array(selection.variables))

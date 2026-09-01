@@ -135,6 +135,7 @@ def test_aggregate_station_query_uses_postgresql_filter_operators():
     assert "JOIN crmp.meta_station" in sql
     assert "JOIN crmp.meta_network" in sql
     assert "regexp_split_to_array" in sql
+    assert "AS TEXT[]" in sql
     assert "&& ARRAY[" in sql
     assert "ST_Intersects" in sql
     assert "unique_variable_tags @> ARRAY[" in sql

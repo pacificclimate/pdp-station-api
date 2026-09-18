@@ -209,6 +209,29 @@ def test_invalid_polygon_is_rejected_before_database_query():
     assert repository.last_selection is None
 
 
+def test_invalid_polygon_reports_shapely_reason():
+    repository = FakeAggregateRepository()
+    client = TestClient(create_app(repository=repository))
+
+    response = client.request(
+        "QUERY",
+        "/agg",
+        json={
+            "format": "nc",
+            "polygon": "POLYGON ((-123 49, -123 49, -123 49, -123 49))",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": (
+            "polygon must be non-empty and valid: "
+            "Too few points in geometry component[-123 49]"
+        )
+    }
+    assert repository.last_selection is None
+
+
 def test_aggregate_options_advertises_query_content_types():
     client = TestClient(create_app(repository=FakeAggregateRepository()))
 

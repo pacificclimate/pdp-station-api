@@ -14,7 +14,7 @@ from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pydap.responses.ascii import ASCIIResponse
-from shapely import from_wkt
+from shapely import from_wkt, is_valid_reason
 from shapely.errors import GEOSException
 
 from .application import (
@@ -127,7 +127,9 @@ def parse_selection(values: Mapping[str, Any]) -> AggregateSelection:
         if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
             raise AggregateRequestError("polygon must be a Polygon or MultiPolygon")
         if geometry.is_empty or not geometry.is_valid:
-            raise AggregateRequestError("polygon must be non-empty and valid")
+            raise AggregateRequestError(
+                f"polygon must be non-empty and valid: {is_valid_reason(geometry)}"
+            )
         polygon = geometry.wkt
 
     return AggregateSelection(

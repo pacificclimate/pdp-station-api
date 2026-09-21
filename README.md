@@ -179,3 +179,30 @@ exposed as an ISO-8601 string with time-coordinate metadata.
 The global dataset name is prefixed by the SQLAlchemy database name, and its
 history records the UTC generation time, `pdp-station-api` package version, and source
 database.
+
+## Legacy PDP URLs
+
+The service accepts the standalone `pcds-only` lister and aggregate paths and
+responds with a `307 Temporary Redirect` to their current equivalents. The
+redirect preserves the query string and, for aggregate requests, the HTTP
+method and body. Legacy `.rsql` and `.csql` dataset markers are removed,
+extensionless station links open the HTML form, and `.xls` downloads become
+`.xlsx` downloads.
+
+| Legacy application path | Current application path |
+| --- | --- |
+| `/pcds/agg[/]` | `/agg` |
+| `/lister[/]` | `/` |
+| `/lister/{raw\|climo}[/]` | `/` |
+| `/lister/{raw\|climo}/{network}[/]` | `/networks/{network}` |
+| `/lister/raw/{network}/{station}.rsql.{format}` | `/dap/raw/{network}/{station}.{format}` |
+| `/lister/climo/{network}/{station}.csql.{format}` | `/dap/climo/{network}/{station}.{format}` |
+
+These are application-relative paths. A deployment prefix still comes first;
+for example, the current development routes are
+`/met-data-portal-pcds/api/data/lister/...` for the old service and
+`/prime/api/data/dap/...` for the replacement. Relative `Location` headers let
+the same application work behind either stripped proxy prefix.
+
+See [Station data URLs](docs/station-data.md) for URL and constraint examples
+adapted from the PDP user documentation.

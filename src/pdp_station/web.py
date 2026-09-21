@@ -3,6 +3,7 @@
 from html import escape
 import json
 import logging
+import re
 from urllib.parse import quote
 from urllib.parse import parse_qs
 
@@ -32,6 +33,8 @@ from .persistence import create_repository
 from .urls import relative_app_root
 
 logger = logging.getLogger(__name__)
+
+LEGACY_RESPONSES = "dds|das|dods|asc|ascii|html|ver|xls|xlsx|nc|csv"
 
 
 def _readiness_endpoint(repository):
@@ -156,6 +159,58 @@ def _root_catalog_redirect(request):
     return RedirectResponse(relative_app_root(request.url.path))
 
 
+def _legacy_redirect(request, target: str):
+    """Redirect an application-relative legacy URL to its canonical route."""
+    location = relative_app_root(request.url.path) + target.lstrip("/")
+    query = request.scope.get("query_string", b"").decode("latin-1")
+    if query:
+        location += "?" + query
+    return RedirectResponse(location, status_code=307)
+
+
+def _legacy_root_redirect(request):
+    return _legacy_redirect(request, "")
+
+
+def _legacy_network_redirect(request):
+    return _legacy_redirect(
+        request, "networks/" + quote(request.path_params["network"], safe="")
+    )
+
+
+def _legacy_dataset_redirect(kind: str, marker: str):
+    dataset_pattern = re.compile(
+        rf"^(?P<native_id>.+)\.{marker}\."
+        rf"(?P<response>{LEGACY_RESPONSES})$"
+    )
+
+    def endpoint(request):
+        legacy_station = request.path_params["station"].rstrip("/")
+        match = dataset_pattern.fullmatch(legacy_station)
+        if match:
+            native_id = match.group("native_id")
+            response = match.group("response")
+            if response == "xls":
+                response = "xlsx"
+        elif ".rsql." in legacy_station or ".csql." in legacy_station:
+            return PlainTextResponse(
+                "Legacy station response format is not supported", status_code=400
+            )
+        else:
+            native_id = legacy_station
+            response = "html"
+
+        network = quote(request.path_params["network"], safe="")
+        native_id = quote(native_id, safe="")
+        return _legacy_redirect(request, f"dap/{kind}/{network}/{native_id}.{response}")
+
+    return endpoint
+
+
+def _legacy_aggregate_redirect(request):
+    return _legacy_redirect(request, "agg")
+
+
 async def _aggregate_parameters(request):
     if request.method == "GET":
         return dict(request.query_params)
@@ -236,6 +291,34 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
     return Starlette(
         routes=[
             Route("/readyz", _readiness_endpoint(repository), name="readiness"),
+            Route(
+                "/pcds/agg",
+                _legacy_aggregate_redirect,
+                methods=["GET", "POST", "QUERY"],
+            ),
+            Route(
+                "/pcds/agg/",
+                _legacy_aggregate_redirect,
+                methods=["GET", "POST", "QUERY"],
+            ),
+            Route("/lister", _legacy_root_redirect),
+            Route("/lister/", _legacy_root_redirect),
+            Route("/lister/raw", _legacy_root_redirect),
+            Route("/lister/raw/", _legacy_root_redirect),
+            Route("/lister/climo", _legacy_root_redirect),
+            Route("/lister/climo/", _legacy_root_redirect),
+            Route("/lister/raw/{network}", _legacy_network_redirect),
+            Route("/lister/raw/{network}/", _legacy_network_redirect),
+            Route("/lister/climo/{network}", _legacy_network_redirect),
+            Route("/lister/climo/{network}/", _legacy_network_redirect),
+            Route(
+                "/lister/raw/{network}/{station:path}",
+                _legacy_dataset_redirect("raw", "rsql"),
+            ),
+            Route(
+                "/lister/climo/{network}/{station:path}",
+                _legacy_dataset_redirect("climo", "csql"),
+            ),
             Route("/", _network_index(service), name="networks"),
             Route(
                 "/networks/{network}",

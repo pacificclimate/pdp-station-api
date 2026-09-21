@@ -1,5 +1,6 @@
 import logging
 
+import pytest
 from starlette.testclient import TestClient
 
 from pdp_station.application import NetworkSummary, RelationReadiness, StationSummary
@@ -100,6 +101,109 @@ def test_health_endpoint_is_replaced_by_readyz():
     client = TestClient(create_app(repository=FakeRepository()))
 
     assert client.get("/health").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("path", "location"),
+    (
+        ("/lister", "./"),
+        ("/lister/", "../"),
+        ("/lister/raw", "../"),
+        ("/lister/raw/", "../../"),
+        ("/lister/climo", "../"),
+        ("/lister/climo/", "../../"),
+        ("/lister/raw/FLNRO-WMB", "../../networks/FLNRO-WMB"),
+        ("/lister/raw/FLNRO-WMB/", "../../../networks/FLNRO-WMB"),
+        ("/lister/climo/FLNRO-WMB", "../../networks/FLNRO-WMB"),
+        ("/lister/climo/FLNRO-WMB/", "../../../networks/FLNRO-WMB"),
+    ),
+)
+def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location):
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    response = client.get(path, follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == location
+
+
+@pytest.mark.parametrize(
+    ("path", "location"),
+    (
+        (
+            "/lister/raw/FLNRO-WMB/1002.rsql.nc",
+            "../../../dap/raw/FLNRO-WMB/1002.nc",
+        ),
+        (
+            "/lister/climo/FLNRO-WMB/1002.csql.csv",
+            "../../../dap/climo/FLNRO-WMB/1002.csv",
+        ),
+        (
+            "/lister/raw/FLNRO-WMB/1002.rsql.xls",
+            "../../../dap/raw/FLNRO-WMB/1002.xlsx",
+        ),
+        (
+            "/lister/raw/FLNRO-WMB/1002",
+            "../../../dap/raw/FLNRO-WMB/1002.html",
+        ),
+        (
+            "/lister/raw/FLNRO-WMB/1002/",
+            "../../../../dap/raw/FLNRO-WMB/1002.html",
+        ),
+    ),
+)
+def test_legacy_lister_station_paths_redirect_to_current_dap(path, location):
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    response = client.get(path, follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == location
+
+
+def test_legacy_redirect_preserves_the_constraint_query_verbatim():
+    client = TestClient(create_app(repository=FakeRepository()))
+    query = "station_observations.air_temp,station_observations.time"
+
+    response = client.get(
+        f"/lister/raw/FLNRO-WMB/1002.rsql.csv?{query}",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == (
+        "../../../dap/raw/FLNRO-WMB/1002.csv?" + query
+    )
+
+
+@pytest.mark.parametrize("method", ("get", "post"))
+@pytest.mark.parametrize(
+    ("path", "location"),
+    (
+        ("/pcds/agg", "../agg?data-format=csv"),
+        ("/pcds/agg/", "../../agg?data-format=csv"),
+    ),
+)
+def test_legacy_aggregate_paths_redirect_and_preserve_the_method(
+    method, path, location
+):
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    response = getattr(client, method)(
+        path + "?data-format=csv", follow_redirects=False
+    )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == location
+
+
+def test_invalid_legacy_dataset_response_is_rejected():
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    response = client.get("/lister/raw/FLNRO-WMB/1002.rsql.exe")
+
+    assert response.status_code == 400
+    assert response.text == "Legacy station response format is not supported"
 
 
 def test_network_index_links_to_network_station_page():

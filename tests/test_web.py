@@ -108,19 +108,37 @@ def test_health_endpoint_is_replaced_by_readyz():
     assert client.get("/health").status_code == 404
 
 
+def test_unobserved_bare_lister_path_is_not_exposed():
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    assert client.get("/lister", follow_redirects=False).status_code == 404
+
+
 @pytest.mark.parametrize(
     ("path", "location"),
     (
-        ("/lister", "./"),
-        ("/lister/", "../"),
-        ("/lister/raw", "../"),
-        ("/lister/raw/", "../../"),
-        ("/lister/climo", "../"),
-        ("/lister/climo/", "../../"),
-        ("/lister/raw/FLNRO-WMB", "../../networks/FLNRO-WMB"),
-        ("/lister/raw/FLNRO-WMB/", "../../../networks/FLNRO-WMB"),
-        ("/lister/climo/FLNRO-WMB", "../../networks/FLNRO-WMB"),
-        ("/lister/climo/FLNRO-WMB/", "../../../networks/FLNRO-WMB"),
+        ("/pcds/lister", "../"),
+        ("/pcds/lister/", "../../"),
+        ("/pcds/lister/raw", "../../"),
+        ("/pcds/lister/raw/", "../../../"),
+        ("/pcds/lister/climo", "../../"),
+        ("/pcds/lister/climo/", "../../../"),
+        (
+            "/pcds/lister/raw/FLNRO-WMB",
+            "../../../networks/FLNRO-WMB",
+        ),
+        (
+            "/pcds/lister/raw/FLNRO-WMB/",
+            "../../../../networks/FLNRO-WMB",
+        ),
+        (
+            "/pcds/lister/climo/FLNRO-WMB",
+            "../../../networks/FLNRO-WMB",
+        ),
+        (
+            "/pcds/lister/climo/FLNRO-WMB/",
+            "../../../../networks/FLNRO-WMB",
+        ),
     ),
 )
 def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location):
@@ -136,28 +154,32 @@ def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location)
     ("path", "location"),
     (
         (
-            "/lister/raw/FLNRO-WMB/1002.rsql.nc",
-            "../../../dap/stations/42.nc",
+            "/pcds/lister/raw/FLNRO-WMB/1002.rsql.html",
+            "../../../../dap/stations/42.html",
         ),
         (
-            "/lister/climo/FLNRO-WMB/1002.csql.csv",
-            "../../../dap/climatologies/42.csv",
+            "/pcds/lister/raw/FLNRO-WMB/1002.rsql.nc",
+            "../../../../dap/stations/42.nc",
         ),
         (
-            "/lister/raw/FLNRO-WMB/1002.rsql.xls",
-            "../../../dap/stations/42.xlsx",
+            "/pcds/lister/climo/FLNRO-WMB/1002.csql.csv",
+            "../../../../dap/climatologies/42.csv",
         ),
         (
-            "/lister/raw/FLNRO-WMB/1002",
-            "../../../dap/raw/FLNRO-WMB/1002.html",
+            "/pcds/lister/raw/FLNRO-WMB/1002.rsql.xls",
+            "../../../../dap/stations/42.xlsx",
         ),
         (
-            "/lister/climo/FLNRO-WMB/1002",
-            "../../../dap/climo/FLNRO-WMB/1002.html",
-        ),
-        (
-            "/lister/raw/FLNRO-WMB/1002/",
+            "/pcds/lister/raw/FLNRO-WMB/1002",
             "../../../../dap/raw/FLNRO-WMB/1002.html",
+        ),
+        (
+            "/pcds/lister/climo/FLNRO-WMB/1002",
+            "../../../../dap/climo/FLNRO-WMB/1002.html",
+        ),
+        (
+            "/pcds/lister/raw/FLNRO-WMB/1002/",
+            "../../../../../dap/raw/FLNRO-WMB/1002.html",
         ),
     ),
 )
@@ -177,18 +199,18 @@ def test_legacy_redirect_preserves_the_constraint_query_verbatim():
     query = "station_observations.air_temp,station_observations.time"
 
     response = client.get(
-        f"/lister/raw/FLNRO-WMB/1002.rsql.csv?{query}",
+        f"/pcds/lister/raw/FLNRO-WMB/1002.rsql.csv?{query}",
         follow_redirects=False,
     )
 
     assert response.status_code == 307
-    assert response.headers["location"] == ("../../../dap/stations/42.csv?" + query)
+    assert response.headers["location"] == ("../../../../dap/stations/42.csv?" + query)
 
 
 def test_unknown_legacy_sql_dataset_is_not_found():
     client = TestClient(create_app(repository=FakeRepository()))
 
-    response = client.get("/lister/raw/FLNRO-WMB/unknown.rsql.csv")
+    response = client.get("/pcds/lister/raw/FLNRO-WMB/unknown.rsql.csv")
 
     assert response.status_code == 404
     assert response.text == "Station FLNRO-WMB/unknown was not found"
@@ -218,7 +240,7 @@ def test_legacy_aggregate_paths_redirect_and_preserve_the_method(
 def test_invalid_legacy_dataset_response_is_rejected():
     client = TestClient(create_app(repository=FakeRepository()))
 
-    response = client.get("/lister/raw/FLNRO-WMB/1002.rsql.exe")
+    response = client.get("/pcds/lister/raw/FLNRO-WMB/1002.rsql.exe")
 
     assert response.status_code == 400
     assert response.text == "Legacy station response format is not supported"

@@ -98,7 +98,7 @@ All paths are application-relative. A reverse-proxy prefix such as
 └── Legacy compatibility                      [307 redirects]
     ├── /pcds/agg[/]
     │       → /agg
-    └── /lister
+    └── /pcds/lister
         ├── [/]
         │       → /
         ├── /{raw|climo}[/]
@@ -211,6 +211,10 @@ Legacy redirects preserve the query string. The `307` response also preserves
 the HTTP method and body for aggregate requests. `.rsql` and `.csql` are
 accepted only at this compatibility boundary because they expose historical
 `pydap.handlers.sql` implementation details.
+
+The legacy lister hierarchy begins at the observed public path
+`/pcds/lister`. Deployment-level prefixes remain the reverse proxy's
+responsibility.
 
 Redirect targets are relative, so proxy prefixes are preserved without being
 known by the application. For example, development may expose the legacy

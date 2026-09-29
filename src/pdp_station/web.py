@@ -36,6 +36,7 @@ from .urls import relative_app_root
 logger = logging.getLogger(__name__)
 
 SUPPORTED_LEGACY_RESPONSES = "dds|das|dods|asc|ascii|html|ver|xls|xlsx|nc|csv"
+LEGACY_LISTER_ROOT = "/pcds/lister"
 
 
 @dataclass(frozen=True)
@@ -251,6 +252,31 @@ def _legacy_aggregate_redirect(request):
     return _legacy_redirect(request, "agg")
 
 
+def _legacy_lister_routes(service: StationDatasetService):
+    """Build the historical PDP /pcds/lister hierarchy."""
+    lister_root = LEGACY_LISTER_ROOT
+    return [
+        Route(lister_root, _legacy_lister_root_redirect),
+        Route(f"{lister_root}/", _legacy_lister_root_redirect),
+        Route(f"{lister_root}/raw", _legacy_lister_root_redirect),
+        Route(f"{lister_root}/raw/", _legacy_lister_root_redirect),
+        Route(f"{lister_root}/climo", _legacy_lister_root_redirect),
+        Route(f"{lister_root}/climo/", _legacy_lister_root_redirect),
+        Route(f"{lister_root}/raw/{{network}}", _legacy_lister_network_redirect),
+        Route(f"{lister_root}/raw/{{network}}/", _legacy_lister_network_redirect),
+        Route(f"{lister_root}/climo/{{network}}", _legacy_lister_network_redirect),
+        Route(f"{lister_root}/climo/{{network}}/", _legacy_lister_network_redirect),
+        Route(
+            f"{lister_root}/raw/{{network}}/{{legacy_dataset:path}}",
+            _legacy_lister_station_redirect(service, "raw"),
+        ),
+        Route(
+            f"{lister_root}/climo/{{network}}/{{legacy_dataset:path}}",
+            _legacy_lister_station_redirect(service, "climo"),
+        ),
+    ]
+
+
 async def _aggregate_parameters(request):
     if request.method == "GET":
         return dict(request.query_params)
@@ -341,24 +367,7 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 _legacy_aggregate_redirect,
                 methods=["GET", "POST", "QUERY"],
             ),
-            Route("/lister", _legacy_lister_root_redirect),
-            Route("/lister/", _legacy_lister_root_redirect),
-            Route("/lister/raw", _legacy_lister_root_redirect),
-            Route("/lister/raw/", _legacy_lister_root_redirect),
-            Route("/lister/climo", _legacy_lister_root_redirect),
-            Route("/lister/climo/", _legacy_lister_root_redirect),
-            Route("/lister/raw/{network}", _legacy_lister_network_redirect),
-            Route("/lister/raw/{network}/", _legacy_lister_network_redirect),
-            Route("/lister/climo/{network}", _legacy_lister_network_redirect),
-            Route("/lister/climo/{network}/", _legacy_lister_network_redirect),
-            Route(
-                "/lister/raw/{network}/{legacy_dataset:path}",
-                _legacy_lister_station_redirect(service, "raw"),
-            ),
-            Route(
-                "/lister/climo/{network}/{legacy_dataset:path}",
-                _legacy_lister_station_redirect(service, "climo"),
-            ),
+            *_legacy_lister_routes(service),
             Route("/", _network_index(service), name="networks"),
             Route(
                 "/networks/{network}",

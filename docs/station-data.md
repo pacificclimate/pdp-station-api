@@ -68,20 +68,19 @@ URLs identified a station by `network/native_id`, for example:
 /data/pcds/lister/raw/EC/1010066.rsql.csv
 ```
 
-That full prefix belonged to the original PDP portal. In a standalone
-`pcds-only` deployment the application route starts at `/lister`; the reverse
-proxy supplies whatever public prefix is configured. This service redirects
-the lister form to the canonical route:
+That public hierarchy is retained by this service beneath `/pcds/lister`; a
+reverse proxy may supply an additional deployment prefix. The SQL-handler form
+redirects to the canonical route:
 
 ```text
-/lister/raw/EC/1010066.rsql.csv
+/pcds/lister/raw/EC/1010066.rsql.csv
     -> /dap/stations/{resolved_station_id}.csv
 ```
 
 The redirect resolves the network-assigned `native_id` to its numeric PyCDS
 `station_id`; the legacy `.rsql` implementation suffix is not carried into the
 canonical URL. An extensionless lister page such as
-`/lister/raw/EC/1010066` redirects directly to
+`/pcds/lister/raw/EC/1010066` redirects directly to
 `/dap/raw/EC/1010066.html`. The same compatibility applies to `.csql`
 climatology URLs, station and network catalog pages, and `/pcds/agg`. Redirects
 use HTTP 307 and preserve the query string. Legacy `.xls` responses redirect

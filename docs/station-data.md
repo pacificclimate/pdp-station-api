@@ -35,8 +35,9 @@ Replace `html` with a response format to download data directly:
 /dap/raw/{network}/{native_id}.dods
 ```
 
-Use `/dap/climo/...` instead of `/dap/raw/...` for climatology data. Numeric
-PyCDS station IDs are also available through the lower-level
+Use `/dap/climo/...` instead of `/dap/raw/...` for climatology data. Here,
+`native_id` is the station identifier assigned by its network or station
+manager. Numeric PyCDS database IDs use the separate lower-level
 `/dap/stations/{station_id}.{response}` and
 `/dap/climatologies/{station_id}.{response}` routes.
 
@@ -60,7 +61,8 @@ the legacy query-string and form field names are documented in the
 
 ## Compatibility with PDP links
 
-Historical PDP documentation showed URLs such as:
+Historical lister pages exposed the underlying SQL-handler dataset URLs. Those
+URLs identified a station by `network/native_id`, for example:
 
 ```text
 /data/pcds/lister/raw/EC/1010066.rsql.csv
@@ -73,9 +75,14 @@ the lister form to the canonical route:
 
 ```text
 /lister/raw/EC/1010066.rsql.csv
-    -> /dap/raw/EC/1010066.csv
+    -> /dap/stations/{resolved_station_id}.csv
 ```
 
-The same compatibility applies to `.csql` climatology URLs, station and
-network catalog pages, and `/pcds/agg`. Redirects use HTTP 307 and preserve the
-query string. Legacy `.xls` responses redirect to `.xlsx`.
+The redirect resolves the network-assigned `native_id` to its numeric PyCDS
+`station_id`; the legacy `.rsql` implementation suffix is not carried into the
+canonical URL. An extensionless lister page such as
+`/lister/raw/EC/1010066` redirects directly to
+`/dap/raw/EC/1010066.html`. The same compatibility applies to `.csql`
+climatology URLs, station and network catalog pages, and `/pcds/agg`. Redirects
+use HTTP 307 and preserve the query string. Legacy `.xls` responses redirect
+to `.xlsx`.

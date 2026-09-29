@@ -37,6 +37,11 @@ class FakeRepository:
             StationSummary(41, "1001"),
         )
 
+    def station_id(self, network, native_id):
+        if (network, native_id) == ("FLNRO-WMB", "1002"):
+            return 42
+        return None
+
 
 class UnavailableRepository(FakeRepository):
     def ready(self):
@@ -132,19 +137,23 @@ def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location)
     (
         (
             "/lister/raw/FLNRO-WMB/1002.rsql.nc",
-            "../../../dap/raw/FLNRO-WMB/1002.nc",
+            "../../../dap/stations/42.nc",
         ),
         (
             "/lister/climo/FLNRO-WMB/1002.csql.csv",
-            "../../../dap/climo/FLNRO-WMB/1002.csv",
+            "../../../dap/climatologies/42.csv",
         ),
         (
             "/lister/raw/FLNRO-WMB/1002.rsql.xls",
-            "../../../dap/raw/FLNRO-WMB/1002.xlsx",
+            "../../../dap/stations/42.xlsx",
         ),
         (
             "/lister/raw/FLNRO-WMB/1002",
             "../../../dap/raw/FLNRO-WMB/1002.html",
+        ),
+        (
+            "/lister/climo/FLNRO-WMB/1002",
+            "../../../dap/climo/FLNRO-WMB/1002.html",
         ),
         (
             "/lister/raw/FLNRO-WMB/1002/",
@@ -152,7 +161,9 @@ def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location)
         ),
     ),
 )
-def test_legacy_lister_station_paths_redirect_to_current_dap(path, location):
+def test_legacy_lister_redirects_native_id_pages_and_station_id_datasets(
+    path, location
+):
     client = TestClient(create_app(repository=FakeRepository()))
 
     response = client.get(path, follow_redirects=False)
@@ -171,9 +182,16 @@ def test_legacy_redirect_preserves_the_constraint_query_verbatim():
     )
 
     assert response.status_code == 307
-    assert response.headers["location"] == (
-        "../../../dap/raw/FLNRO-WMB/1002.csv?" + query
-    )
+    assert response.headers["location"] == ("../../../dap/stations/42.csv?" + query)
+
+
+def test_unknown_legacy_sql_dataset_is_not_found():
+    client = TestClient(create_app(repository=FakeRepository()))
+
+    response = client.get("/lister/raw/FLNRO-WMB/unknown.rsql.csv")
+
+    assert response.status_code == 404
+    assert response.text == "Station FLNRO-WMB/unknown was not found"
 
 
 @pytest.mark.parametrize("method", ("get", "post"))

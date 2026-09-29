@@ -1,5 +1,6 @@
 """ASGI composition root."""
 
+from dataclasses import dataclass
 from html import escape
 import json
 import logging
@@ -34,7 +35,19 @@ from .urls import relative_app_root
 
 logger = logging.getLogger(__name__)
 
-LEGACY_RESPONSES = "dds|das|dods|asc|ascii|html|ver|xls|xlsx|nc|csv"
+SUPPORTED_LEGACY_RESPONSES = "dds|das|dods|asc|ascii|html|ver|xls|xlsx|nc|csv"
+
+
+@dataclass(frozen=True)
+class LegacySqlDataset:
+    handler_suffix: str
+    canonical_station_collection: str
+
+
+LEGACY_SQL_DATASETS = {
+    "raw": LegacySqlDataset("rsql", "stations"),
+    "climo": LegacySqlDataset("csql", "climatologies"),
+}
 
 
 def _readiness_endpoint(repository):
@@ -168,41 +181,68 @@ def _legacy_redirect(request, target: str):
     return RedirectResponse(location, status_code=307)
 
 
-def _legacy_root_redirect(request):
+def _legacy_lister_root_redirect(request):
     return _legacy_redirect(request, "")
 
 
-def _legacy_network_redirect(request):
+def _legacy_lister_network_redirect(request):
     return _legacy_redirect(
         request, "networks/" + quote(request.path_params["network"], safe="")
     )
 
 
-def _legacy_dataset_redirect(kind: str, marker: str):
+def _legacy_lister_station_redirect(service: StationDatasetService, dataset_kind: str):
+    """Translate native-ID lister pages and SQL-handler datasets.
+
+    Extensionless lister paths name a station by ``network/native_id`` and map
+    to the equivalent public DAP HTML form. SQL-handler dataset paths also use
+    ``network/native_id``; resolve that pair to ``station_id`` before mapping
+    it to the separate numeric DAP endpoint.
+
+    ``rsql`` and ``csql`` named pydap.handlers.sql implementations, not data
+    concepts. Accept those suffixes only at this compatibility boundary and
+    leave them out of the canonical URL.
+    """
+    legacy_sql_dataset = LEGACY_SQL_DATASETS[dataset_kind]
     dataset_pattern = re.compile(
-        rf"^(?P<native_id>.+)\.{marker}\."
-        rf"(?P<response>{LEGACY_RESPONSES})$"
+        rf"^(?P<native_id>.+)\."
+        rf"{legacy_sql_dataset.handler_suffix}\."
+        rf"(?P<response>{SUPPORTED_LEGACY_RESPONSES})$"
     )
 
     def endpoint(request):
-        legacy_station = request.path_params["station"].rstrip("/")
-        match = dataset_pattern.fullmatch(legacy_station)
+        legacy_dataset = request.path_params["legacy_dataset"].rstrip("/")
+        match = dataset_pattern.fullmatch(legacy_dataset)
         if match:
             native_id = match.group("native_id")
+            network = request.path_params["network"]
+            try:
+                station_id = service.public_station_id(network, native_id)
+            except StationNotFoundError as exc:
+                return PlainTextResponse(str(exc), status_code=404)
             response = match.group("response")
             if response == "xls":
                 response = "xlsx"
-        elif ".rsql." in legacy_station or ".csql." in legacy_station:
+            return _legacy_redirect(
+                request,
+                "dap/"
+                f"{legacy_sql_dataset.canonical_station_collection}/"
+                f"{station_id}.{response}",
+            )
+        if any(
+            f".{dataset.handler_suffix}." in legacy_dataset
+            for dataset in LEGACY_SQL_DATASETS.values()
+        ):
             return PlainTextResponse(
                 "Legacy station response format is not supported", status_code=400
             )
-        else:
-            native_id = legacy_station
-            response = "html"
 
         network = quote(request.path_params["network"], safe="")
-        native_id = quote(native_id, safe="")
-        return _legacy_redirect(request, f"dap/{kind}/{network}/{native_id}.{response}")
+        native_id = quote(legacy_dataset, safe="")
+        return _legacy_redirect(
+            request,
+            f"dap/{dataset_kind}/{network}/{native_id}.html",
+        )
 
     return endpoint
 
@@ -301,23 +341,23 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 _legacy_aggregate_redirect,
                 methods=["GET", "POST", "QUERY"],
             ),
-            Route("/lister", _legacy_root_redirect),
-            Route("/lister/", _legacy_root_redirect),
-            Route("/lister/raw", _legacy_root_redirect),
-            Route("/lister/raw/", _legacy_root_redirect),
-            Route("/lister/climo", _legacy_root_redirect),
-            Route("/lister/climo/", _legacy_root_redirect),
-            Route("/lister/raw/{network}", _legacy_network_redirect),
-            Route("/lister/raw/{network}/", _legacy_network_redirect),
-            Route("/lister/climo/{network}", _legacy_network_redirect),
-            Route("/lister/climo/{network}/", _legacy_network_redirect),
+            Route("/lister", _legacy_lister_root_redirect),
+            Route("/lister/", _legacy_lister_root_redirect),
+            Route("/lister/raw", _legacy_lister_root_redirect),
+            Route("/lister/raw/", _legacy_lister_root_redirect),
+            Route("/lister/climo", _legacy_lister_root_redirect),
+            Route("/lister/climo/", _legacy_lister_root_redirect),
+            Route("/lister/raw/{network}", _legacy_lister_network_redirect),
+            Route("/lister/raw/{network}/", _legacy_lister_network_redirect),
+            Route("/lister/climo/{network}", _legacy_lister_network_redirect),
+            Route("/lister/climo/{network}/", _legacy_lister_network_redirect),
             Route(
-                "/lister/raw/{network}/{station:path}",
-                _legacy_dataset_redirect("raw", "rsql"),
+                "/lister/raw/{network}/{legacy_dataset:path}",
+                _legacy_lister_station_redirect(service, "raw"),
             ),
             Route(
-                "/lister/climo/{network}/{station:path}",
-                _legacy_dataset_redirect("climo", "csql"),
+                "/lister/climo/{network}/{legacy_dataset:path}",
+                _legacy_lister_station_redirect(service, "climo"),
             ),
             Route("/", _network_index(service), name="networks"),
             Route(

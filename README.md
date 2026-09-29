@@ -166,9 +166,11 @@ The `/dap` and `/dap/` roots also redirect to `/`, which makes pydap's generated
 “Home” breadcrumb return to the network catalog.
 
 Numeric PyCDS station IDs provide the canonical low-level API. The `raw` and
-`climo` routes provide a user-facing compatibility interface that resolves a
-published network and native station ID to the internal station ID. Responses
-are served directly through DAP; the legacy `.rsql` path component is not used.
+`climo` routes provide a separate user-facing interface that resolves a
+published network and its canonical `native_id` to the database `station_id`.
+Responses are served directly through DAP; the legacy `.rsql` and `.csql`
+components exposed details of `pydap.handlers.sql` and are confined to legacy
+redirect handling.
 
 Each dataset includes `NC_GLOBAL` station, network, contact, location, and
 elevation attributes. Horizontal coordinates are derived only from station
@@ -195,8 +197,10 @@ extensionless station links open the HTML form, and `.xls` downloads become
 | `/lister[/]` | `/` |
 | `/lister/{raw\|climo}[/]` | `/` |
 | `/lister/{raw\|climo}/{network}[/]` | `/networks/{network}` |
-| `/lister/raw/{network}/{station}.rsql.{format}` | `/dap/raw/{network}/{station}.{format}` |
-| `/lister/climo/{network}/{station}.csql.{format}` | `/dap/climo/{network}/{station}.{format}` |
+| `/lister/raw/{network}/{native_id}` | `/dap/raw/{network}/{native_id}.html` |
+| `/lister/climo/{network}/{native_id}` | `/dap/climo/{network}/{native_id}.html` |
+| `/lister/raw/{network}/{native_id}.rsql.{format}` | `/dap/stations/{resolved_station_id}.{format}` |
+| `/lister/climo/{network}/{native_id}.csql.{format}` | `/dap/climatologies/{resolved_station_id}.{format}` |
 
 These are application-relative paths. A deployment prefix still comes first;
 for example, the current development routes are

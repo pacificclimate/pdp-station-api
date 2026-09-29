@@ -118,6 +118,17 @@ def test_readiness_returns_relation_and_privilege_failures():
     assert not any(check.ready for check in checks)
 
 
+def test_station_catalog_excludes_stations_without_histories():
+    sessions = RecordingSessions()
+    repository = PycdsStationRepository(sessions)
+
+    repository.stations("ENV-AQN")
+
+    sql = str(sessions.session.statement.compile(dialect=postgresql.dialect()))
+    assert "EXISTS (SELECT crmp.meta_history.history_id" in sql
+    assert "crmp.meta_history.station_id = crmp.meta_station.station_id" in sql
+
+
 def test_aggregate_station_query_uses_postgresql_filter_operators():
     sessions = RecordingSessions()
     repository = PycdsStationRepository(sessions)

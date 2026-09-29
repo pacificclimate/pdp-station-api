@@ -107,10 +107,15 @@ class StationDatasetService:
     def public_station(
         self, network: str, native_id: str, climatology: bool = False
     ) -> StationDataset:
+        station_id = self.public_station_id(network, native_id)
+        return self.station(station_id, climatology=climatology)
+
+    def public_station_id(self, network: str, native_id: str) -> int:
+        """Resolve a network-assigned native ID to its PyCDS station ID."""
         station_id = self.repository.station_id(network, native_id)
         if station_id is None:
             raise StationNotFoundError(f"Station {network}/{native_id} was not found")
-        return self.station(station_id, climatology=climatology)
+        return station_id
 
     def networks(self) -> tuple[NetworkSummary, ...]:
         return tuple(

@@ -180,6 +180,12 @@ class PycdsStationRepository:
         return NetworkSummary(row.name, row.display_name, row.long_name)
 
     def stations(self, network: str) -> tuple[StationSummary, ...]:
+        has_history = (
+            select(History.id)
+            .where(History.station_id == Station.id)
+            .correlate(Station)
+            .exists()
+        )
         latest_name = (
             select(History.station_name)
             .where(History.station_id == Station.id)
@@ -199,6 +205,7 @@ class PycdsStationRepository:
                 Network.name == network,
                 Network.publish.is_(True),
                 Station.publish.is_(True),
+                has_history,
             )
             .order_by(Station.native_id, Station.id)
         )

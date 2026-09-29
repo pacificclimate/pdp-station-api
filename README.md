@@ -75,17 +75,63 @@ readinessProbe:
   timeoutSeconds: 5
 ```
 
-The initial endpoint shape is:
+## URL hierarchy
+
+All paths are application-relative. A reverse-proxy prefix such as
+`/prime/api/data` may precede them. Bracketed annotations describe behavior;
+`[/]` means that both trailing- and non-trailing-slash forms are accepted.
 
 ```text
-/dap/stations/{station_id}.dds
-/dap/stations/{station_id}.das
-/dap/stations/{station_id}.dods
-/dap/stations/{station_id}.ascii
-/dap/climatologies/{station_id}.{response}
-/dap/raw/{network}/{native_id}.{response}
-/dap/climo/{network}/{native_id}.{response}
+/
+├── /readyz[?verbose]                         [readiness]
+├── /networks/{network}                       [HTML station catalog]
+├── /agg[/]                                   [aggregate ZIP]
+│                                                GET, POST, QUERY, OPTIONS
+│
+├── /dap
+│   ├── /stations/{station_id}.{response}     [raw observations]
+│   ├── /climatologies/{station_id}.{response}[climatology]
+│   ├── /raw/{network}/{native_id}.{response} [raw observations]
+│   └── /climo/{network}/{native_id}.{response}
+│                                                [climatology]
+│
+└── Legacy compatibility                      [307 redirects]
+    ├── /pcds/agg[/]
+    │       → /agg
+    └── /pcds/lister
+        ├── [/]
+        │       → /
+        ├── /{raw|climo}[/]
+        │       → /
+        ├── /{raw|climo}/{network}[/]
+        │       → /networks/{network}
+        ├── /raw/{network}/{native_id}
+        │       → /dap/raw/{network}/{native_id}.html
+        ├── /climo/{network}/{native_id}
+        │       → /dap/climo/{network}/{native_id}.html
+        ├── /raw/{network}/{native_id}.rsql.{format}
+        │       → resolve (network, native_id) to station_id
+        │       → /dap/stations/{station_id}.{format}
+        └── /climo/{network}/{native_id}.csql.{format}
+                → resolve (network, native_id) to station_id
+                → /dap/climatologies/{station_id}.{format}
 ```
+
+The application root lists published networks. Network catalog pages link to
+the public `network/native_id` DAP HTML forms. Numeric `station_id` routes are
+the corresponding low-level database-ID interface; the two identifier forms
+remain separate.
+
+Canonical DAP responses are `dds`, `das`, `dods`, `asc`, `ascii`, `html`,
+`ver`, `xlsx`, `nc`, and `csv`. Legacy SQL-handler URLs also accept `xls` and
+redirect it to `xlsx`.
+
+Intermediate breadcrumb paths under `/dap` redirect to the catalog: `/dap`,
+`/dap/raw`, `/dap/climo`, `/dap/stations`, and `/dap/climatologies` go to `/`,
+while `/dap/raw/{network}` and `/dap/climo/{network}` go to the corresponding
+network page. These redirects support both trailing-slash forms.
+
+## Direct station downloads
 
 In addition to the standard DAP responses, `xlsx` and `nc` generate Excel and
 NetCDF4 downloads. These formats are assembled in a `SpooledTemporaryFile` so
@@ -101,6 +147,15 @@ can be selected explicitly with `PDP_STATION_XLSX_ENGINE=xlsxwriter`.
 If a constraint produces no observation rows, the Rust-backed path delegates
 that workbook to XlsxWriter so the data sheet still contains its column header
 row.
+
+Each dataset includes `NC_GLOBAL` station, network, contact, location, and
+elevation attributes. Horizontal coordinates are derived only from station
+history geometry. Network contact details are used when available and default
+to `pcic.support@uvic.ca`. Observation variables include their PyCDS display
+name, description, CF standard name, units, and cell-method metadata. Time is
+exposed as an ISO-8601 string with time-coordinate metadata. The global dataset
+name is prefixed by the SQLAlchemy database name, and its history records the
+UTC generation time, `pdp-station-api` package version, and source database.
 
 ## Aggregate downloads
 
@@ -150,32 +205,21 @@ traceback and the active station's numeric ID, network, and native ID, allowing
 a truncated client download to be correlated with server logs without logging
 the polygon or other raw request parameters.
 
-The service also provides a small HTML catalog. `/` lists published networks,
-and `/networks/{network}` lists that network's published stations. Station
-links open the corresponding public DAP HTML download form.
+## Legacy compatibility
 
-Pydap builds its HTML breadcrumbs mechanically from each segment of a dataset
-URL. Intermediate paths such as `/dap/raw` and `/dap/raw/{network}` are not DAP
-datasets in this service, so exact ASGI routes redirect them to `/` and
-`/networks/{network}` respectively. Equivalent redirects cover climatology and
-numeric-ID paths. These shims keep pydap's generated breadcrumbs useful without
-overriding or depending on its internal Jinja templates. Both trailing- and
-non-trailing-slash forms are handled because the broader `/dap` mount would
-otherwise consume trailing-slash paths before Starlette could normalize them.
-The `/dap` and `/dap/` roots also redirect to `/`, which makes pydap's generated
-“Home” breadcrumb return to the network catalog.
+Legacy redirects preserve the query string. The `307` response also preserves
+the HTTP method and body for aggregate requests. `.rsql` and `.csql` are
+accepted only at this compatibility boundary because they expose historical
+`pydap.handlers.sql` implementation details.
 
-Numeric PyCDS station IDs provide the canonical low-level API. The `raw` and
-`climo` routes provide a user-facing compatibility interface that resolves a
-published network and native station ID to the internal station ID. Responses
-are served directly through DAP; the legacy `.rsql` path component is not used.
+The legacy lister hierarchy begins at the observed public path
+`/pcds/lister`. Deployment-level prefixes remain the reverse proxy's
+responsibility.
 
-Each dataset includes `NC_GLOBAL` station, network, contact, location, and
-elevation attributes. Horizontal coordinates are derived only from station
-history geometry. Network contact details are used when available and default
-to `pcic.support@uvic.ca`. Observation variables include their PyCDS display
-name, description, CF standard name, units, and cell-method metadata. Time is
-exposed as an ISO-8601 string with time-coordinate metadata.
-The global dataset name is prefixed by the SQLAlchemy database name, and its
-history records the UTC generation time, `pdp-station-api` package version, and source
-database.
+Redirect targets are relative, so proxy prefixes are preserved without being
+known by the application. For example, development may expose the legacy
+service under `/met-data-portal-pcds/api/data` and this service under
+`/prime/api/data` while both applications operate on the hierarchy above.
+
+See [Station data URLs](docs/station-data.md) for constraint and download
+examples adapted from the PDP user documentation.

@@ -10,6 +10,14 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.5
+
+*Release Date: 2026-Oct-01*
+
+Explain invalid aggregate polygons, and add redirects for legacy
+paths in the network/station lister URL hierarchy
+
+
 ## 0.1.4
 
 *Release Date: 2026-Sep-01*

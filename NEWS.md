@@ -10,6 +10,14 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.6
+
+*Release Date: 2026-Oct-01*
+
+Remove performance-replay dependencies inadvertently included in version
+0.1.5's project metadata.
+
+
 ## 0.1.5
 
 *Release Date: 2026-Oct-01*

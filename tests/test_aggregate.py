@@ -7,6 +7,7 @@ from zipfile import ZipFile
 import h5netcdf
 import openpyxl
 import pytest
+from shapely import from_wkt, Point
 from starlette.testclient import TestClient
 
 from pdp_station.application import (
@@ -230,6 +231,49 @@ def test_invalid_polygon_reports_shapely_reason():
         )
     }
     assert repository.last_selection is None
+
+
+def test_overlapping_polygon_components_select_their_union():
+    selection = parse_selection(
+        {
+            "polygon": (
+                "MULTIPOLYGON ("
+                "((0 0, 2 0, 2 2, 0 2, 0 0)), "
+                "((1 1, 3 1, 3 3, 1 3, 1 1))"
+                ")"
+            )
+        }
+    )
+
+    geometry = from_wkt(selection.polygon)
+
+    assert geometry.is_valid
+    assert geometry.area == pytest.approx(7.0)
+    assert geometry.intersects(Point(0.5, 0.5))
+    assert geometry.intersects(Point(1.5, 1.5))
+    assert geometry.intersects(Point(2.5, 2.5))
+    assert not geometry.intersects(Point(3.5, 3.5))
+
+
+def test_disjoint_polygon_components_select_every_component():
+    selection = parse_selection(
+        {
+            "polygon": (
+                "MULTIPOLYGON ("
+                "((0 0, 1 0, 1 1, 0 1, 0 0)), "
+                "((2 2, 3 2, 3 3, 2 3, 2 2))"
+                ")"
+            )
+        }
+    )
+
+    geometry = from_wkt(selection.polygon)
+
+    assert geometry.is_valid
+    assert geometry.area == pytest.approx(2.0)
+    assert geometry.intersects(Point(0.5, 0.5))
+    assert geometry.intersects(Point(2.5, 2.5))
+    assert not geometry.intersects(Point(1.5, 1.5))
 
 
 def test_aggregate_options_advertises_query_content_types():

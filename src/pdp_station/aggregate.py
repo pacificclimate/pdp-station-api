@@ -14,7 +14,7 @@ from typing import Any
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from pydap.responses.ascii import ASCIIResponse
-from shapely import from_wkt, is_valid_reason
+from shapely import from_wkt, is_valid_reason, union_all
 from shapely.errors import GEOSException
 
 from .application import (
@@ -126,9 +126,33 @@ def parse_selection(values: Mapping[str, Any]) -> AggregateSelection:
             raise AggregateRequestError("polygon is not valid WKT") from exc
         if geometry.geom_type not in {"Polygon", "MultiPolygon"}:
             raise AggregateRequestError("polygon must be a Polygon or MultiPolygon")
+        components = (
+            tuple(geometry.geoms)
+            if geometry.geom_type == "MultiPolygon"
+            else (geometry,)
+        )
+        invalid_component = next(
+            (
+                component
+                for component in components
+                if component.is_empty or not component.is_valid
+            ),
+            None,
+        )
+        if invalid_component is not None:
+            raise AggregateRequestError(
+                "polygon must be non-empty and valid: "
+                f"{is_valid_reason(invalid_component)}"
+            )
+        try:
+            geometry = union_all(components)
+        except GEOSException as exc:
+            raise AggregateRequestError(
+                "polygon components could not be unioned"
+            ) from exc
         if geometry.is_empty or not geometry.is_valid:
             raise AggregateRequestError(
-                f"polygon must be non-empty and valid: {is_valid_reason(geometry)}"
+                f"polygon union must be non-empty and valid: {is_valid_reason(geometry)}"
             )
         polygon = geometry.wkt
 

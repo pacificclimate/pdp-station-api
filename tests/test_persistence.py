@@ -1,7 +1,10 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+import pytest
+from sqlalchemy import create_engine
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.orm import sessionmaker
 
 from pdp_station.application import AggregateSelection
 from pdp_station.persistence import (
@@ -127,6 +130,52 @@ def test_station_catalog_excludes_stations_without_histories():
     sql = str(sessions.session.statement.compile(dialect=postgresql.dialect()))
     assert "EXISTS (SELECT crmp.meta_history.history_id" in sql
     assert "crmp.meta_history.station_id = crmp.meta_station.station_id" in sql
+
+
+@pytest.mark.parametrize(
+    ("network", "native_id", "old_id", "valid_id"),
+    (("CRD", "4rw6", 12514, 15038), ("ENV-AQN", "E299830", 12135, 15078)),
+)
+def test_station_lookup_skips_published_duplicates_without_history(
+    network, native_id, old_id, valid_id
+):
+    # Execute the real lookup queries against the minimal relational fixture;
+    # these queries do not require PostgreSQL or PostGIS features.
+    engine = create_engine(
+        "sqlite://", execution_options={"schema_translate_map": {"crmp": None}}
+    )
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE meta_network (network_id INTEGER, network_name TEXT, publish BOOLEAN)"
+            )
+            connection.exec_driver_sql(
+                "CREATE TABLE meta_station (station_id INTEGER, network_id INTEGER, native_id TEXT, publish BOOLEAN)"
+            )
+            connection.exec_driver_sql(
+                "CREATE TABLE meta_history (history_id INTEGER, station_id INTEGER)"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO meta_network VALUES (1, ?, 1)", (network,)
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO meta_station VALUES (?, 1, ?, 1)",
+                [(old_id, native_id), (valid_id, native_id)],
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO meta_history VALUES (?, ?)", [(1, valid_id), (2, valid_id)]
+            )
+        repository = PycdsStationRepository(sessionmaker(bind=engine))
+        assert repository.station_id(network, native_id) == valid_id
+        assert repository.published_station_id(old_id) is None
+        assert repository.published_station_id(valid_id) == valid_id
+
+        with engine.begin() as connection:
+            connection.exec_driver_sql("DELETE FROM meta_history")
+        assert repository.station_id(network, native_id) is None
+        assert repository.published_station_id(valid_id) is None
+    finally:
+        engine.dispose()
 
 
 def test_aggregate_station_query_uses_postgresql_filter_operators():

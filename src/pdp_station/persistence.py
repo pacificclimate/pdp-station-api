@@ -331,6 +331,12 @@ class PycdsStationRepository:
         return attributes
 
     def published_station_id(self, station_id: int) -> int | None:
+        has_history = (
+            select(History.id)
+            .where(History.station_id == Station.id)
+            .correlate(Station)
+            .exists()
+        )
         statement = (
             select(Station.id)
             .join(Network, Station.network_id == Network.id)
@@ -338,12 +344,21 @@ class PycdsStationRepository:
                 Station.id == station_id,
                 Network.publish.is_(True),
                 Station.publish.is_(True),
+                has_history,
             )
         )
         with self._session() as session:
             return session.scalar(statement)
 
     def station_id(self, network: str, native_id: str) -> int | None:
+        # Published duplicate native IDs can include abandoned station records
+        # without histories. Resolve only records that can supply metadata.
+        has_history = (
+            select(History.id)
+            .where(History.station_id == Station.id)
+            .correlate(Station)
+            .exists()
+        )
         statement = (
             select(Station.id)
             .join(Network, Station.network_id == Network.id)
@@ -352,6 +367,7 @@ class PycdsStationRepository:
                 Station.native_id == native_id,
                 Network.publish.is_(True),
                 Station.publish.is_(True),
+                has_history,
             )
             .order_by(Station.id)
             .limit(1)

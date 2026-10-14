@@ -98,7 +98,7 @@ All paths are application-relative. A reverse-proxy prefix such as
 └── Legacy compatibility                      [307 redirects]
     ├── /pcds/agg[/]
     │       → /agg
-    └── /pcds/lister
+    └── /lister or /pcds/lister
         ├── [/]
         │       → /
         ├── /{raw|climo}[/]
@@ -212,14 +212,17 @@ the HTTP method and body for aggregate requests. `.rsql` and `.csql` are
 accepted only at this compatibility boundary because they expose historical
 `pydap.handlers.sql` implementation details.
 
-The legacy lister hierarchy begins at the observed public path
-`/pcds/lister`. Deployment-level prefixes remain the reverse proxy's
-responsibility.
+Both historical lister hierarchies are supported: standalone `pcds-only`
+exposed `/lister`, while full PDP mounted it under `/pcds/lister`.
+Deployment-level prefixes remain the reverse proxy's responsibility.
 
 Redirect targets are relative, so proxy prefixes are preserved without being
-known by the application. For example, development may expose the legacy
-service under `/met-data-portal-pcds/api/data` and this service under
-`/prime/api/data` while both applications operate on the hierarchy above.
+known by the application. The proxy must route the entire application mount,
+including `/dap`, `/networks`, and `/agg` destinations. For historical
+`/data/pcds/lister/...` URLs, route and strip `/data/pcds`, so the application
+receives `/lister/...` and redirects remain under `/data/pcds/`. Stripping
+only `/data` would send canonical redirects to `/data/dap/...`, outside the
+station API router and into the monolithic PDP backend.
 
 See [Station data URLs](docs/station-data.md) for constraint and download
 examples adapted from the PDP user documentation.

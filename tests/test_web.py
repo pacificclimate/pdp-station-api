@@ -1,9 +1,16 @@
 import logging
+from datetime import datetime
+from urllib.parse import urljoin, urlsplit
 
 import pytest
 from starlette.testclient import TestClient
 
-from pdp_station.application import NetworkSummary, RelationReadiness, StationSummary
+from pdp_station.application import (
+    NetworkSummary,
+    RelationReadiness,
+    StationDataset,
+    StationSummary,
+)
 from pdp_station.web import create_app
 
 
@@ -41,6 +48,15 @@ class FakeRepository:
         if (network, native_id) == ("FLNRO-WMB", "1002"):
             return 42
         return None
+
+    def published_station_id(self, station_id):
+        return station_id if station_id == 42 else None
+
+    def describe(self, station_id, climatology=False):
+        return StationDataset(station_id, climatology, ("obs_time", "temperature"))
+
+    def rows(self, query):
+        yield (datetime(2025, 1, 2), 12.5)
 
 
 class UnavailableRepository(FakeRepository):
@@ -108,10 +124,33 @@ def test_health_endpoint_is_replaced_by_readyz():
     assert client.get("/health").status_code == 404
 
 
-def test_unobserved_bare_lister_path_is_not_exposed():
+@pytest.mark.parametrize("prefix", ("/data/pcds", "/met-data-portal-pcds/api/data"))
+@pytest.mark.parametrize("root", ("/lister", "/pcds/lister"))
+@pytest.mark.parametrize(
+    ("suffix", "target"),
+    (
+        ("", "/"),
+        ("/", "/"),
+        ("/raw/FLNRO-WMB/", "/networks/FLNRO-WMB"),
+        ("/raw/FLNRO-WMB/1002/", "/dap/raw/FLNRO-WMB/1002.html"),
+        ("/raw/FLNRO-WMB/1002.rsql.html", "/dap/stations/42.html"),
+        ("/raw/FLNRO-WMB/1002.rsql.csv", "/dap/stations/42.csv"),
+        ("/climo/FLNRO-WMB/1002.csql.csv", "/dap/climatologies/42.csv"),
+    ),
+)
+def test_public_legacy_redirect_stays_within_proxy_mount(prefix, root, suffix, target):
     client = TestClient(create_app(repository=FakeRepository()))
-
-    assert client.get("/lister", follow_redirects=False).status_code == 404
+    public_url = "https://example.test" + prefix + root + suffix
+    # Traefik strips the complete public mount before forwarding each request.
+    response = client.get(root + suffix, follow_redirects=False)
+    assert response.status_code == 307
+    destination = urljoin(public_url, response.headers["location"])
+    assert destination == "https://example.test" + prefix + target
+    internal_path = urlsplit(destination).path[len(prefix) :]
+    final = client.get(internal_path)
+    assert final.status_code == 200
+    if target.endswith(".csv"):
+        assert "12.5" in final.text
 
 
 @pytest.mark.parametrize(
@@ -141,7 +180,13 @@ def test_unobserved_bare_lister_path_is_not_exposed():
         ),
     ),
 )
-def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location):
+@pytest.mark.parametrize("standalone", (False, True))
+def test_legacy_lister_catalog_paths_redirect_to_current_catalog(
+    path, location, standalone
+):
+    if standalone:
+        path = path.removeprefix("/pcds")
+        location = location.removeprefix("../") or "./"
     client = TestClient(create_app(repository=FakeRepository()))
 
     response = client.get(path, follow_redirects=False)
@@ -183,9 +228,13 @@ def test_legacy_lister_catalog_paths_redirect_to_current_catalog(path, location)
         ),
     ),
 )
+@pytest.mark.parametrize("standalone", (False, True))
 def test_legacy_lister_redirects_native_id_pages_and_station_id_datasets(
-    path, location
+    path, location, standalone
 ):
+    if standalone:
+        path = path.removeprefix("/pcds")
+        location = location.removeprefix("../")
     client = TestClient(create_app(repository=FakeRepository()))
 
     response = client.get(path, follow_redirects=False)

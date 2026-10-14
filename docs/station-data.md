@@ -68,8 +68,12 @@ URLs identified a station by `network/native_id`, for example:
 /data/pcds/lister/raw/EC/1010066.rsql.csv
 ```
 
-That public hierarchy is retained by this service beneath `/pcds/lister`; a
-reverse proxy may supply an additional deployment prefix. The SQL-handler form
+Both `/lister` (standalone PDP) and `/pcds/lister` (full PDP) are accepted.
+For the historical public `/data/pcds` mount, the proxy strips `/data/pcds`,
+leaving `/lister/...` for the application. The proxy must also serve canonical
+destinations under that mount, such as `/data/pcds/dap/...`.
+The portal mount `/met-data-portal-pcds/api/data` follows the same principle.
+The SQL-handler form
 redirects to the canonical route:
 
 ```text

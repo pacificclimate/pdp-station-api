@@ -36,7 +36,6 @@ from .urls import relative_app_root
 logger = logging.getLogger(__name__)
 
 SUPPORTED_LEGACY_RESPONSES = "dds|das|dods|asc|ascii|html|ver|xls|xlsx|nc|csv"
-LEGACY_LISTER_ROOT = "/pcds/lister"
 
 
 @dataclass(frozen=True)
@@ -252,9 +251,8 @@ def _legacy_aggregate_redirect(request):
     return _legacy_redirect(request, "agg")
 
 
-def _legacy_lister_routes(service: StationDatasetService):
-    """Build the historical PDP /pcds/lister hierarchy."""
-    lister_root = LEGACY_LISTER_ROOT
+def _legacy_lister_routes(service: StationDatasetService, lister_root: str):
+    """Share native-ID compatibility routes across both historical PDP mounts."""
     return [
         Route(lister_root, _legacy_lister_root_redirect),
         Route(f"{lister_root}/", _legacy_lister_root_redirect),
@@ -367,7 +365,9 @@ def create_app(settings: Settings | None = None, repository=None) -> Starlette:
                 _legacy_aggregate_redirect,
                 methods=["GET", "POST", "QUERY"],
             ),
-            *_legacy_lister_routes(service),
+            # Standalone pcds-only exposed /lister; full PDP added /pcds.
+            *_legacy_lister_routes(service, "/lister"),
+            *_legacy_lister_routes(service, "/pcds/lister"),
             Route("/", _network_index(service), name="networks"),
             Route(
                 "/networks/{network}",

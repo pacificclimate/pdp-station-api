@@ -5,3 +5,4 @@
 *.py[cod]
 .env
 dist/
+docs/_build/

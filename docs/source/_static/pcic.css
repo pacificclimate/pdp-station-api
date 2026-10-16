@@ -1,0 +1,37 @@
+/* PCIC palette, from the PCIC Style Quick Reference. Colours that differ by
+   theme are set through Furo in conf.py (including automatic dark mode). */
+body {
+  --color-admonition-title: var(--pcic-note-accent);
+  --color-admonition-title-background: var(--pcic-note-background);
+  --color-admonition-title--note: var(--pcic-note-accent);
+  --color-admonition-title-background--note: var(--pcic-note-background);
+  --color-admonition-title--seealso: var(--pcic-note-accent);
+  --color-admonition-title-background--seealso: var(--pcic-note-background);
+  --color-admonition-title--important: var(--pcic-callout-accent);
+  --color-admonition-title-background--important: var(--pcic-callout-background);
+  --color-admonition-title--tip: var(--pcic-callout-accent);
+  --color-admonition-title-background--tip: var(--pcic-callout-background);
+  --color-admonition-title--hint: var(--pcic-callout-accent);
+  --color-admonition-title-background--hint: var(--pcic-callout-background);
+  --color-admonition-title--warning: #B36B00;
+  --color-admonition-title-background--warning: #B36B001A;
+  --color-admonition-title--caution: #B36B00;
+  --color-admonition-title-background--caution: #B36B001A;
+  --color-admonition-title--attention: #B36B00;
+  --color-admonition-title-background--attention: #B36B001A;
+  --color-admonition-title--danger: #C94A38;
+  --color-admonition-title-background--danger: #C94A381A;
+  --color-admonition-title--error: #C94A38;
+  --color-admonition-title-background--error: #C94A381A;
+}
+
+.content h1 {
+  color: var(--pcic-heading);
+  border-bottom: 3px solid #60BA46;
+  padding-bottom: 0.35em;
+}
+
+.content h2,
+.content h3 {
+  color: var(--pcic-section-heading);
+}

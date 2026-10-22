@@ -186,6 +186,31 @@ JSON accepts `networks`, `variables`, and `frequencies` as lists. Dates may use
 form-encoded bodies. Variable and frequency filters determine which stations
 are included; as in PDP, they do not remove columns from the station files.
 
+To select specific stations, send numeric database IDs (not native or history IDs):
+
+```console
+curl --fail -X POST http://localhost:8000/agg \
+  -H 'Content-Type: application/json' \
+  --data '{"station_ids": [41, 42], "format": "nc"}' \
+  --output selected-stations.zip
+```
+
+`station_ids` is optional and must be a non-empty list of positive JSON integers.
+Legacy GET and form-encoded requests use `station-ids=41,42`. IDs are deduplicated
+and combined with every other supplied selection filter by intersection. For
+example, a supplied network or polygon can exclude a requested station ID. Omit
+those criteria when requesting an explicit selection independently of them; a
+network list is not required when selecting IDs. Publication restrictions always
+apply. Station and network publication checks also exclude unpublished IDs.
+Unknown IDs are ignored; no matches returns HTTP 200 with an empty ZIP, preserving
+existing empty-selection behaviour. Omitting the parameter preserves existing
+selection defaults. Explicit empty input, `null`, booleans, fractional or
+non-positive IDs, invalid strings, or supplying both parameter names returns HTTP
+422 before archive streaming starts; these requests never select all stations.
+
+Add `"climatology": true` for climatologies. Date clipping remains optional, for
+example `"from_date": "2020-01-01", "to_date": "2020-12-31", "clip_dates": true`.
+
 Before starting a response, the service resolves the complete station set,
 enforces its limit, and loads each station's metadata and variable description.
 This catches likely failures without running the expensive observation queries.

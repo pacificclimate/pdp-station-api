@@ -10,6 +10,13 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## Unreleased
+
+- Add optional station-ID selection to aggregate downloads through JSON
+  `station_ids` and legacy query/form `station-ids`. IDs intersect with existing
+  filters and publication restrictions; empty or malformed inputs are rejected
+  before ZIP streaming begins.
+
 ## 0.1.9
 
 *Release Date: 2026-Oct-27*

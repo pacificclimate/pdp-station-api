@@ -43,6 +43,7 @@ class AggregateSelection:
     climatology: bool = False
     clip_dates: bool = False
     data_format: str = "nc"
+    station_ids: tuple[int, ...] | None = None
 
 
 @dataclass(frozen=True)

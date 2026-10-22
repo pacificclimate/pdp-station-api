@@ -28,6 +28,8 @@ Selection options
 
    * - Field
      - Meaning
+   * - ``station_ids``
+     - Optional non-empty list of positive database station IDs, not native or history IDs.
    * - ``networks``
      - List of observation network names.
    * - ``variables``
@@ -56,6 +58,39 @@ that range. Date clipping includes both the start and end dates.
    from the downloaded station files. Use a single-station OPeNDAP constraint
    to select specific columns. Without ``clip_dates: true``, date selection does
    not clip the downloaded observations.
+
+Selecting stations by ID
+-----------------------
+
+For one station or an explicit selection, pass database station IDs. A network
+list is not required. For example, using ``POST`` for proxy compatibility:
+
+.. code-block:: console
+
+   curl --fail --location -X POST '[base_url]/agg' \
+     -H 'Content-Type: application/json' \
+     --data '{"station_ids": [41, 42], "format": "csv"}' \
+     --output selected-stations.zip
+
+Legacy GET query strings and form-encoded POST/QUERY bodies accept
+``station-ids=41,42``. JSON ``station_ids`` must be an integer list; strings,
+booleans, fractional numbers and non-positive integers are not accepted. Duplicate
+IDs are removed and ID order does not affect the selection or request fingerprint.
+Do not supply both ``station_ids`` and ``station-ids`` in one request.
+
+IDs intersect with all other supplied selection filters. An ID outside a supplied
+network or polygon is excluded. Omit those criteria when downloading an explicit
+selection independently of them. Publication restrictions always apply, and
+unknown or unpublished IDs do not produce station files. If no stations match,
+the existing response is HTTP 200 with an empty ZIP, without network indexes.
+Omitting the ID parameter preserves existing selection behaviour. Explicit empty
+input, null, malformed IDs or conflicting parameter names returns HTTP 422 before
+streaming; it never broadens the selection to all stations.
+
+To download climatologies, add ``"climatology": true``. To clip observations,
+add ``"from_date": "2020-01-01", "to_date": "2020-12-31", "clip_dates": true``.
+Without clipping, dates only affect station selection. All existing file formats
+and archive member names remain unchanged.
 
 Large requests
 --------------

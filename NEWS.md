@@ -10,6 +10,17 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.9
+
+*Release Date: 2026-Oct-27*
+
+Rebuild the documentation image on a patched Nginx release. The previous
+base image (Nginx 1.28.0) is affected by 23 published Nginx advisories,
+including CVE-2026-42533.
+
+- Upgrade the documentation image base from `nginx:1.28.0-alpine` to
+  `nginx:1.30.6-alpine`.
+
 ## 0.1.8
 
 *Release Date: 2026-Oct-27*

@@ -1,5 +1,5 @@
 # Build the HTML first; the build context is docs/_build/html only.
-FROM nginx:1.28.0-alpine
+FROM nginx:1.30.6-alpine
 
 ARG API_VERSION
 ARG DOCS_REVISION

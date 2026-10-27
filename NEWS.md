@@ -10,6 +10,16 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
+## 0.1.8
+
+*Release Date: 2026-Oct-27*
+
+Rebuild the API and documentation images to pick up patched operating system
+packages addressing CVE-2026-111497.
+
+- Upgrade Debian packages in the API image during build.
+- Upgrade Alpine packages in the documentation image during build.
+
 ## 0.1.7
 
 *Release Date: 2026-Oct-16*

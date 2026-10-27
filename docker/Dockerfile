@@ -36,6 +36,7 @@ ENV PATH="/app/.venv/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1
 
 RUN apt-get update && \
+    apt-get upgrade -yq && \
     apt-get install -yq --no-install-recommends \
         curl \
         libpq5 && \

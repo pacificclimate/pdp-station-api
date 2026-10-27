@@ -8,6 +8,8 @@ LABEL org.opencontainers.image.title="Station Data API documentation" \
       org.opencontainers.image.revision="${DOCS_REVISION}" \
       org.opencontainers.image.source="https://github.com/pacificclimate/pdp-station-api"
 
+RUN apk upgrade --no-cache
+
 COPY . /usr/share/nginx/html/
 EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

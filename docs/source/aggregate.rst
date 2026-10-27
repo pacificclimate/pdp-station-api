@@ -60,7 +60,7 @@ that range. Date clipping includes both the start and end dates.
    not clip the downloaded observations.
 
 Selecting stations by ID
------------------------
+------------------------
 
 For one station or an explicit selection, pass database station IDs. A network
 list is not required. For example, using ``POST`` for proxy compatibility:

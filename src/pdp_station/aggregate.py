@@ -69,6 +69,40 @@ def _items(value: Any) -> tuple[str, ...]:
     return tuple(item.strip() for item in source if str(item).strip())
 
 
+def _station_ids(values: Mapping[str, Any]) -> tuple[int, ...] | None:
+    names = [name for name in ("station_ids", "station-ids") if name in values]
+    if not names:
+        return None
+    if len(names) > 1:
+        raise AggregateRequestError("Supply station_ids or station-ids, not both")
+    name = names[0]
+    value = values[name]
+    if name == "station_ids":
+        if not isinstance(value, list) or not value:
+            raise AggregateRequestError("station_ids must be a non-empty integer list")
+        if any(type(item) is not int or item <= 0 for item in value):
+            raise AggregateRequestError("station_ids must contain positive integers")
+        ids = value
+    else:
+        if not isinstance(value, str):
+            raise AggregateRequestError("station-ids must be comma-separated integers")
+        tokens = [token.strip() for token in value.split(",")]
+        if any(
+            not token or not token.isascii() or not token.isdecimal()
+            for token in tokens
+        ):
+            raise AggregateRequestError("station-ids must contain positive integers")
+        try:
+            ids = [int(token) for token in tokens]
+        except ValueError as exc:
+            raise AggregateRequestError(
+                "station-ids must contain positive integers"
+            ) from exc
+        if any(item <= 0 for item in ids):
+            raise AggregateRequestError("station-ids must contain positive integers")
+    return tuple(sorted(set(ids)))
+
+
 def _boolean(value: Any, *, present: bool = False) -> bool:
     if value is None:
         return present
@@ -157,6 +191,7 @@ def parse_selection(values: Mapping[str, Any]) -> AggregateSelection:
         polygon = geometry.wkt
 
     return AggregateSelection(
+        station_ids=_station_ids(values),
         networks=_items(_first(values, "networks", "network-name")),
         variables=_items(_first(values, "variables", "input-vars", "input-var")),
         frequencies=_items(_first(values, "frequencies", "input-freq")),

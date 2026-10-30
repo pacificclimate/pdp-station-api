@@ -386,6 +386,8 @@ class PycdsStationRepository:
             .join(Network, Network.id == Station.network_id)
             .where(Network.publish.is_(True), Station.publish.is_(True))
         )
+        if selection.station_ids is not None:
+            statement = statement.where(Station.id.in_(selection.station_ids))
         if selection.networks:
             statement = statement.where(Network.name.in_(selection.networks))
         if selection.variables:

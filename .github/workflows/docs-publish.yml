@@ -30,6 +30,12 @@ jobs:
       - name: Install documentation dependencies
         run: pip install -r docs/requirements.txt
 
+      - name: Test portal importer
+        run: python3 -m unittest discover -s docs -p test_import_portal.py
+
+      - name: Import pinned portal guide
+        run: python3 docs/import_portal.py
+
       - name: Build documentation
         run: sphinx-build -d docs/_build/doctrees -b html --fail-on-warning --keep-going docs/source docs/_build/html
 
@@ -82,7 +88,7 @@ jobs:
             fi
             sleep 1
           done
-          for page in index stations programmatic aggregate compatibility faq contributing search; do
+          for page in index portal/root stations programmatic aggregate compatibility faq contributing search; do
             docker exec docs-check wget -q -O /dev/null "http://127.0.0.1/$page.html"
           done
           docker exec docs-check wget -q -O /dev/null http://127.0.0.1/searchindex.js

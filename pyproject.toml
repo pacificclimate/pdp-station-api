@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pdp-station-api"
-version = "0.1.9"
+version = "0.2.0"
 description = "Streaming OPeNDAP service for PCIC station data"
 authors = ["Pacific Climate Impacts Consortium"]
 license = "GPL-3.0-only"

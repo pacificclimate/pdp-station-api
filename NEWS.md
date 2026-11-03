@@ -10,12 +10,16 @@ Add new releases above older releases using this structure:
 Briefly summarize the release, followed by a list of its notable changes.
 -->
 
-## Unreleased
+## 0.2.0
 
-- Add optional station-ID selection to aggregate downloads through JSON
-  `station_ids` and legacy query/form `station-ids`. IDs intersect with existing
+- Added optional station-ID filtering to aggregate downloads through JSON
+  `station_ids` and query/form `station-ids`. IDs intersect with existing
   filters and publication restrictions; empty or malformed inputs are rejected
-  before ZIP streaming begins.
+  before ZIP streaming begins. ([#3](https://github.com/pacificclimate/pdp-station-api/pull/3))
+- Added the portal user guide to the shared documentation site, imported from
+  a pinned portal commit using its manifest. Includes portal version information,
+  local previews and documentation build checks. ([#4](https://github.com/pacificclimate/pdp-station-api/pull/4))
+
 
 ## 0.1.9
 

@@ -12,6 +12,8 @@ Briefly summarize the release, followed by a list of its notable changes.
 
 ## 0.2.0
 
+*Release Date: 2026-Nov-03*
+
 - Added optional station-ID filtering to aggregate downloads through JSON
   `station_ids` and query/form `station-ids`. IDs intersect with existing
   filters and publication restrictions; empty or malformed inputs are rejected

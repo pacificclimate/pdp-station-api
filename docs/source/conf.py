@@ -23,7 +23,7 @@ extensions = []
 root_doc = "index"
 nitpicky = True
 html_theme = "furo"
-html_title = f"{project} — v{release}"
+html_title = f"Station Data documentation — API v{release}"
 html_static_path = ["_static"]
 html_css_files = ["pcic.css"]
 

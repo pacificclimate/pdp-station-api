@@ -249,8 +249,9 @@ receives `/lister/...` and redirects remain under `/data/pcds/`. Stripping
 only `/data` would send canonical redirects to `/data/dap/...`, outside the
 station API router and into the monolithic PDP backend.
 
-See the [Station Data API user guide](docs/source/index.rst) for station
+See the [Station Data guide](docs/source/index.rst) for portal controls, station
 listings, programmatic access, aggregate downloads, and migration guidance.
 [Documentation build and deployment](docs/README.md) explains local preview
 and the separate `pcic/pdp-station-api-docs` Nginx image workflow. The guide's
-version follows `pyproject.toml`; deploy its image with the matching API release.
+API version follows `pyproject.toml`; the portal guide has a separate source pin
+and version. Deploy its image with the matching API and portal releases.

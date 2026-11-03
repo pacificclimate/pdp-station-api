@@ -11,6 +11,7 @@ From the repository root:
 ```console
 python3 -m venv /tmp/pdp-docs
 /tmp/pdp-docs/bin/pip install -r docs/requirements.txt
+python3 docs/import_portal.py
 /tmp/pdp-docs/bin/sphinx-build -d docs/_build/doctrees -b html --fail-on-warning --keep-going docs/source docs/_build/html
 python3 -m http.server 8080 --directory docs/_build/html
 ```
@@ -25,6 +26,39 @@ Update that note if the deployment route changes; building the docs does not
 require a checkout of the deployment repo. Sphinx inserts the UTC build date
 through `|today|`. All subsequent API examples use the literal `[base_url]`
 placeholder defined by the note.
+
+## Portal user guide
+
+Portal instructions are maintained in `station-data-portal/docs/user/` and
+imported into the generated, ignored `docs/source/portal/` directory. Do not
+edit the generated copy. Like the historical PDP build, the importer reads
+`docs/user/manifest.yaml` and copies only the files listed there, preserving
+its recursive directory structure. PyYAML parses the manifest with `safe_load`.
+Only documentation and image file types are accepted; configuration and
+executable files are rejected, and missing listed files fail the import.
+
+`docs/portal-source.json` pins the portal to a full commit SHA. Normal builds
+fetch that immutable source from GitHub; they never follow a moving branch.
+The importer reads the portal version from that commit's `package.json` and
+adds it and the source revision to the guide. The API version remains separate.
+Network or source errors fail the import rather than falling back to stale files.
+Run the importer before Sphinx, including when building locally. CI does both.
+
+To preview uncommitted portal guide changes from a sibling checkout:
+
+```console
+python3 docs/import_portal.py --local-preview ../station-data-portal
+/tmp/pdp-docs/bin/sphinx-build -E -b html --fail-on-warning --keep-going docs/source docs/_build/html
+```
+
+The imported page is marked Local preview. Do not publish that output; rerun
+the normal pinned import before producing a deployable site.
+
+When releasing a portal update, first commit and push its guide, then update
+`revision` in `docs/portal-source.json` to the full SHA containing that guide.
+Rebuild and deploy the documentation image for the API and portal being served.
+An API-only release retains the existing portal pin. A guide correction can
+advance the pin independently if it still describes the deployed portal.
 
 ## Brand colours
 
@@ -92,6 +126,7 @@ gain documentation images.
 The guide adapts `pdp:pcds-only`'s `doc/source/pcds.rst` Station Listings and
 Advanced/Programmatic Usage, plus relevant FAQ and contributor guidance. Routes,
 formats, time handling, and examples describe this API. The old developer
-autodoc, map UI instructions, and raster portal material are excluded. The
+autodoc and raster portal material are excluded. Map UI instructions come from
+the separately pinned portal guide rather than the historical PDP copy. The
 raster Power user HOWTO describes separate catalog and mapping services, so it
 is not presented as a station API feature. The original repository is unchanged.

@@ -6,3 +6,4 @@
 .env
 dist/
 docs/_build/
+docs/source/portal/

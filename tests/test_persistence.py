@@ -182,6 +182,7 @@ def test_aggregate_station_query_uses_postgresql_filter_operators():
     sessions = RecordingSessions()
     repository = PycdsStationRepository(sessions)
     selection = AggregateSelection(
+        station_ids=(41, 42),
         networks=("FLNRO-WMB",),
         variables=("air_temperature_time: point",),
         frequencies=("1-hourly",),
@@ -192,6 +193,10 @@ def test_aggregate_station_query_uses_postgresql_filter_operators():
     repository.aggregate_stations(selection)
 
     sql = str(sessions.session.statement.compile(dialect=postgresql.dialect()))
+    assert "meta_station.station_id IN" in sql
+    assert [41, 42] in sessions.session.statement.compile(
+        dialect=postgresql.dialect()
+    ).params.values()
     assert "JOIN crmp.meta_station" in sql
     assert "JOIN crmp.meta_network" in sql
     assert "regexp_split_to_array" in sql
@@ -201,3 +206,136 @@ def test_aggregate_station_query_uses_postgresql_filter_operators():
     assert "unique_variable_tags @> ARRAY[" in sql
     assert "meta_network.publish IS true" in sql
     assert "meta_station.publish IS true" in sql
+
+
+@pytest.fixture
+def aggregate_repository():
+    # Exercise the real selection query without requiring an external database.
+    # SQLite functions use Shapely for the PostGIS operations needed here.
+    from shapely import from_wkt
+    from sqlalchemy import event
+
+    engine = create_engine(
+        "sqlite://", execution_options={"schema_translate_map": {"crmp": None}}
+    )
+
+    @event.listens_for(engine, "connect")
+    def spatial_functions(connection, _record):
+        connection.create_function("ST_GeomFromText", 2, lambda wkt, _srid: wkt)
+        connection.create_function(
+            "ST_Intersects",
+            2,
+            lambda left, right: from_wkt(left).intersects(from_wkt(right)),
+        )
+
+    try:
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "CREATE TABLE meta_network (network_id INTEGER, network_name TEXT, publish BOOLEAN)"
+            )
+            connection.exec_driver_sql(
+                "CREATE TABLE meta_station (station_id INTEGER, network_id INTEGER, native_id TEXT, publish BOOLEAN)"
+            )
+            connection.exec_driver_sql(
+                "CREATE TABLE crmp_network_geoserver (station_id INTEGER, history_id INTEGER, the_geom TEXT, freq TEXT, min_obs_time DATETIME, max_obs_time DATETIME)"
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO meta_network VALUES (?, ?, ?)",
+                [(1, "A", True), (2, "HIDDEN", False), (3, "C", True)],
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO meta_station VALUES (?, ?, ?, ?)",
+                [
+                    (41, 1, "A001", True),
+                    (42, 1, "A002", True),
+                    (43, 1, "PRIVATE", False),
+                    (44, 2, "HIDDEN", True),
+                    (45, 3, "C001", True),
+                ],
+            )
+            connection.exec_driver_sql(
+                "INSERT INTO crmp_network_geoserver VALUES (?, ?, ?, ?, ?, ?)",
+                [
+                    (station_id, history_id, geometry, frequency, start, end)
+                    for station_id, history_id, geometry, frequency, start, end in [
+                        (41, 1, "POINT (-123 49)", "daily", "2019-01-01", "2021-12-31"),
+                        (41, 2, "POINT (-123 49)", "daily", "2019-01-01", "2021-12-31"),
+                        (
+                            42,
+                            3,
+                            "POINT (-123 49)",
+                            "1-hourly",
+                            "2019-01-01",
+                            "2021-12-31",
+                        ),
+                        (43, 4, "POINT (-123 49)", "daily", "2019-01-01", "2021-12-31"),
+                        (44, 5, "POINT (-123 49)", "daily", "2019-01-01", "2021-12-31"),
+                        (45, 6, "POINT (-122 50)", "daily", "1990-01-01", "1999-12-31"),
+                    ]
+                ],
+            )
+        yield PycdsStationRepository(sessionmaker(bind=engine))
+    finally:
+        engine.dispose()
+
+
+@pytest.mark.parametrize(
+    ("selection", "expected"),
+    [
+        (AggregateSelection(), {41, 42, 45}),
+        (AggregateSelection(station_ids=(41,)), {41}),
+        (AggregateSelection(station_ids=(41, 41)), {41}),
+        (AggregateSelection(station_ids=(41, 42, 43, 44, 45, 999)), {41, 42, 45}),
+        (AggregateSelection(station_ids=(999,)), set()),
+        (AggregateSelection(station_ids=(43, 44)), set()),
+        (AggregateSelection(station_ids=()), set()),
+        (AggregateSelection(station_ids=(41, 45), networks=("C",)), {45}),
+        (AggregateSelection(station_ids=(41,), networks=("C",)), set()),
+        (AggregateSelection(station_ids=(41, 42), frequencies=("1-hourly",)), {42}),
+        (
+            AggregateSelection(
+                station_ids=(41, 45), from_date=datetime(2020, 1, 1).date()
+            ),
+            {41},
+        ),
+        (
+            AggregateSelection(
+                station_ids=(41, 45), to_date=datetime(2000, 1, 1).date()
+            ),
+            {45},
+        ),
+        (
+            AggregateSelection(
+                station_ids=(41,), from_date=datetime(2030, 1, 1).date()
+            ),
+            set(),
+        ),
+        (
+            AggregateSelection(
+                station_ids=(41,),
+                polygon="POLYGON ((-124 48, -122.5 48, -122.5 49.5, -124 49.5, -124 48))",
+            ),
+            {41},
+        ),
+        (
+            AggregateSelection(
+                station_ids=(41, 45),
+                polygon="POLYGON ((-124 48, -122.5 48, -122.5 49.5, -124 49.5, -124 48))",
+            ),
+            {41},
+        ),
+        (
+            AggregateSelection(
+                station_ids=(45,),
+                polygon="POLYGON ((-124 48, -122.5 48, -122.5 49.5, -124 49.5, -124 48))",
+            ),
+            set(),
+        ),
+    ],
+)
+def test_station_id_selection_intersects_filters_and_enforces_publication(
+    aggregate_repository, selection, expected
+):
+    stations = aggregate_repository.aggregate_stations(selection)
+    assert {station.station_id for station in stations} == expected
+    assert len(stations) == len(expected)
